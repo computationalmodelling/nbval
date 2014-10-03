@@ -42,6 +42,10 @@ def get_cell_description(cell_input):
     return "no description"
 
 class RunningKernel(object):
+    """
+    Running a Kernel in IPython, info can be found at:
+    http://ipython.org/ipython-doc/stable/development/messaging.html
+    """
 
     def __init__(self):
         self.km = KernelManager()
@@ -162,7 +166,7 @@ class IPyNbCell(pytest.Item):
                     attr = attr.replace('+xml', '').replace('plain', 'text')
                     setattr(out, attr, data)
                 if msg_type == 'pyout':
-                    out.prompt_number = content['execution_count']
+                    out.prompt_number = reply['execution_count']
             else:
                 print "unhandled iopub msg:", msg_type
 
