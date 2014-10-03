@@ -14,7 +14,7 @@ try:
 except:
     from queue import Empty
 
-from IPython.nbformat.current import reads
+from IPython.nbformat.current import reads, NotebookNode
 
 class IPyNbException(Exception):
     """ custom exception for error reporting. """
@@ -104,7 +104,10 @@ class IPyNbCell(pytest.Item):
             shell.execute(self.parent.fixture_cell.input, allow_stdin=False)
         """
 
-        # Execute the code in the cell and get the message details
+        """
+        Execute the code from the cell and get the msg_id of the shell process.
+        This is the parent header message id for subsequent 
+        """
         msg_id = shell.execute(self.cell.input, allow_stdin=False)
 
         """
@@ -113,15 +116,71 @@ class IPyNbCell(pytest.Item):
         """
 
         timeout = 20
+
+        # This list stores the output information for the entire cell
+        outs = []
+
         while True:
+            """
+            The messages from the cell contain information such as input code, outputs generated
+            and other messages. We iterate through each message until we reach the end of the cell.
+            """
             try:
+                # Gets one message at a time
                 msg = shell.get_msg(block=True, timeout=timeout)
+
+                # Breaks on the last message
                 if msg.get("parent_header", None) and msg["parent_header"].get("msg_id", None) == msg_id:
                     break
             except Empty:
                 raise IPyNbException("Timeout of %d seconds exceeded executing cell: %s" (timeout, self.cell.input))
 
+
+            """
+            We want to compare the outputs of the messages to a reference output
+            """
+
+            # If the message isn't an output, we don't do anything else with it
+            msg_type = msg['msg_type']
+            if msg_type in ('status', 'pyin'):
+                continue
+            elif msg_type == 'clear_output':
+                outs = []
+                continue
+
+            reply = msg['content']
+            out = NotebookNode(output_type=msg_type)
+
+            # Now check what type of output it is
+            if msg_type == 'stream':
+                out.stream = reply['name']
+                out.text = reply['data']
+            elif msg_type in ('display_data', 'pyout'):
+                out['metadata'] = reply['metadata']
+                for mime, data in reply['data'].iteritems():
+                    attr = mime.split('/')[-1].lower()
+                    attr = attr.replace('+xml', '').replace('plain', 'text')
+                    setattr(out, attr, data)
+                if msg_type == 'pyout':
+                    out.prompt_number = content['execution_count']
+            else:
+                print "unhandled iopub msg:", msg_type
+
+            outs.append(out)
+                
+
+        """
+        This message is the last message of the cell, which contains no output.
+        It only indicates whether the entire cell ran successfully or if there
+        was an error.
+        """
         reply = msg['content']
+        print "Outputs are....\n\n"
+        print outs
+        print "\n\n Reply is..... \n\n"
+        print reply
+
+        raise NotImplementedError
 
         if reply['status'] == 'error':
             raise IPyNbException(self.cell_num, self.cell_description, self.cell.input, '\n'.join(reply['traceback']))
@@ -133,7 +192,7 @@ class IPyNbCell(pytest.Item):
         matches the outputs in the existing notebook.
         This code is taken from [REF].
         """
-
+        
 
 
 
