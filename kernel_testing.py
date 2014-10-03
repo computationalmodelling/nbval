@@ -10,21 +10,19 @@ except ImportError:
 from IPython.nbformat.current import reads, NotebookNode
 
 
-def run_cell(shell, iopub, cell):
+def run_cell(shell, iopub, cell, t):
     """
     Here we will figure out how the timings affect the outputs
     """
-
-    print '\n\n RUNNING CELL \n\n'
-    print shell.execute(cell.input)
-
+    print '\n\n =========== RUNNING CELL for timeout={} ================ \n\n'.format(t)
+    shell.execute(cell.input)
     # wait for finish, maximum 20s
     shell.get_msg(timeout=1000)
     outs = []
 
     while True:
         try:
-            msg = iopub.get_msg(timeout=1.)
+            msg = iopub.get_msg(timeout=t)
         except Empty:
             break
         msg_type = msg['msg_type']
@@ -42,7 +40,7 @@ def run_cell(shell, iopub, cell):
         out = NotebookNode(output_type=msg_type)
 
 
-def execute_kernel(nb):
+def execute_kernel(nb, t):
     """
     Load Kernel stuff
 
@@ -70,7 +68,7 @@ def execute_kernel(nb):
     shell.get_msg()
     while True:
         try:
-            print iopub.get_msg(timeout=1)
+            iopub.get_msg(timeout=1)
         except Empty:
             break
 
@@ -85,16 +83,20 @@ def execute_kernel(nb):
 
         # Otherwise the cell is an output cell, run it!
         try:
-            outs = run_cell(shell, iopub, cell)
+            outs = run_cell(shell, iopub, cell, t)
             print outs
         except Exception as e:
             print "failed to run cell:", repr(e)
             print cell.input
 
+        # Only print the first cell !
+        # break
 
 
 for ipynb in sys.argv[1:]:
         print "testing %s" % ipynb
         with open(ipynb) as f:
             nb = reads(f.read(), 'json')
-        execute_kernel(nb)
+
+        for t in [0.1, 1, 10]:
+            execute_kernel(nb, t)
