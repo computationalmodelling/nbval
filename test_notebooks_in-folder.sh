@@ -3,5 +3,5 @@ do
 	echo "\n"
 	echo "=========== TESTING $(echo $FILE | grep "\w*\.ipynb") ==============\n"
         echo "===================================================================\n"	
-	./parsenb.py $FILE
+	python parsenb.py $FILE
 done

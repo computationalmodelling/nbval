@@ -34,7 +34,7 @@ def compare_png(a64, b64):
 
 def sanitize(s):
     """sanitize a string for comparison.
-    
+
     fix universal newlines, strip trailing newlines, and normalize likely random values (memory addresses and UUIDs)
     """
     if not isinstance(s, basestring):
@@ -60,16 +60,16 @@ def sanitize(s):
 
     # normalize newline:
     s = s.replace('\r\n', '\n')
-    
+
     # ignore trailing newlines (but not space)
     s = s.rstrip('\n')
-    
+
     # normalize hex addresses:
     s = re.sub(r'0x[a-f0-9]+', '0xFFFFFFFF', s)
-    
+
     # normalize UUIDs:
     s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}', 'U-U-I-D', s)
-    
+
     return s
 
 
@@ -78,7 +78,7 @@ def consolidate_outputs(outputs):
     data = defaultdict(list)
     data['stdout'] = ''
     data['stderr'] = ''
-    
+
     for out in outputs:
         if out.type == 'stream':
             data[out.stream] += out.text
@@ -117,12 +117,12 @@ def run_cell(shell, iopub, cell):
     # print cell.input
     shell.execute(cell.input)
     # wait for finish, maximum 20s
-    shell.get_msg(timeout=20)
+    shell.get_msg(timeout=1000)
     outs = []
-    
+
     while True:
         try:
-            msg = iopub.get_msg(timeout=5)
+            msg = iopub.get_msg(timeout=1.)
         except Empty:
             break
         msg_type = msg['msg_type']
@@ -131,11 +131,11 @@ def run_cell(shell, iopub, cell):
         elif msg_type == 'clear_output':
             outs = []
             continue
-        
+
         content = msg['content']
         # print msg_type, content
         out = NotebookNode(output_type=msg_type)
-        
+
         if msg_type == 'stream':
             out.stream = content['name']
             out.text = content['data']
@@ -154,10 +154,10 @@ def run_cell(shell, iopub, cell):
             out.traceback = content['traceback']
         else:
             print "unhandled iopub msg:", msg_type
-        
+
         outs.append(out)
     return outs
-    
+
 
 def test_notebook(nb):
     km = KernelManager()
@@ -172,7 +172,7 @@ def test_notebook(nb):
         kc.start_channels()
         iopub = kc.sub_channel
     shell = kc.shell_channel
-    
+
     # run %pylab inline, because some notebooks assume this
     # even though they shouldn't
     shell.execute("pass")
@@ -182,7 +182,7 @@ def test_notebook(nb):
             iopub.get_msg(timeout=1)
         except Empty:
             break
-    
+
     successes = 0
     failures = 0
     errors = 0
@@ -197,9 +197,15 @@ def test_notebook(nb):
                 print cell.input
                 errors += 1
                 continue
-            
+
             failed = False
             for out, ref in zip(outs, cell.outputs):
+                # print '\n This is the output: \n'
+                # print out
+                # print '\n'
+                # print 'This is the reference:\n'
+                # print ref
+                # print '\n'
                 if not compare_outputs(out, ref):
                     failed = True
             if failed:
@@ -210,7 +216,7 @@ def test_notebook(nb):
 
     print
     print "tested notebook %s" % nb.metadata.name
-    print bcolors.OKGREEN +  "    %3i cells successfully replicated" % + successes + bcolors.ENDC
+    print bcolors.OKGREEN + "    %3i cells successfully replicated" % + successes + bcolors.ENDC
     if failures:
         print bcolors.FAIL + "    %3i cells mismatched output" % failures + bcolors.ENDC
     if errors:
