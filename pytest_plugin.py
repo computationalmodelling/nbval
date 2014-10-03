@@ -20,7 +20,7 @@ class IPyNbException(Exception):
     """ custom exception for error reporting. """
 
 def pytest_collect_file(path, parent):
-    if path.fnmatch("test*.ipynb"):
+    if path.fnmatch("*.ipynb"):
         return IPyNbFile(path, parent)
 
 def get_cell_description(cell_input):
