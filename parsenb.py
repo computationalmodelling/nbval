@@ -7,6 +7,7 @@ Usage: `parsenb.py foo.ipynb [bar.ipynb [...]]`
 Each cell is submitted to the kernel, and the outputs are compared with those stored in the notebook.
 """
 
+import subprocess32
 import os,sys,time
 import base64
 import re
@@ -186,10 +187,20 @@ def test_notebook(nb):
     successes = 0
     failures = 0
     errors = 0
+    
+    """
+    IPython notebooks currently only support a single worksheet
+    Future versions may use many, so we leave the outer loop
+    A worksheet is simply a group of cells
+    e.g. could use for cell in nb.worksheets[0].cells:
+    """
     for ws in nb.worksheets:
         for cell in ws.cells:
+            # If the cell is code, move to next cell
             if cell.cell_type != 'code':
                 continue
+                
+            # Otherwise the cell is an output cell, run it!
             try:
                 outs = run_cell(shell, iopub, cell)
             except Exception as e:
