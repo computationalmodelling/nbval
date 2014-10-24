@@ -16,12 +16,19 @@ def run_cell(shell, iopub, cell, t, tshell):
     """
     print '\n\n =========== RUNNING CELL for timeout={} ================ \n\n'.format(t)
     shell.execute(cell.input)
-    # wait for finish, maximum 20s
+    # This value must be significantly large to get the outputs
+    # According to the previous tests, it must be around 1000
+    # It is just needed for the outputs to be executed properly
+    # (when the cells are executed, it stops, so it doenst take
+    # 1000 secs for every cell)
     shell.get_msg(timeout=tshell)
     outs = []
 
     while True:
         try:
+            # This timing can be very small, 1 sec or so
+            # We still need to figure out what is different
+            # with the previous tshell timing variable
             msg = iopub.get_msg(timeout=t)
         except Empty:
             break
@@ -100,5 +107,6 @@ for ipynb in sys.argv[1:]:
         with open(ipynb) as f:
             nb = reads(f.read(), 'json')
 
-        for t in [10, 20, 40]:
-            execute_kernel(nb, 1, t)
+        for tshell in [1000]:
+            for t in [1.]:
+                execute_kernel(nb, t, tshell)
