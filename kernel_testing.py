@@ -10,14 +10,14 @@ except ImportError:
 from IPython.nbformat.current import reads, NotebookNode
 
 
-def run_cell(shell, iopub, cell, t):
+def run_cell(shell, iopub, cell, t, tshell):
     """
     Here we will figure out how the timings affect the outputs
     """
     print '\n\n =========== RUNNING CELL for timeout={} ================ \n\n'.format(t)
     shell.execute(cell.input)
     # wait for finish, maximum 20s
-    shell.get_msg(timeout=1000)
+    shell.get_msg(timeout=tshell)
     outs = []
 
     while True:
@@ -40,14 +40,15 @@ def run_cell(shell, iopub, cell, t):
         out = NotebookNode(output_type=msg_type)
 
 
-def execute_kernel(nb, t):
+def execute_kernel(nb, t, tshell):
     """
     Load Kernel stuff
 
     iopub may be necessary to run through the cell
     """
     km = KernelManager()
-    km.start_kernel(extra_arguments=['--pylab=inline'], stderr=open(os.devnull, 'w'))
+    km.start_kernel(extra_arguments=['--matplotlib=inline'],
+                    stderr=open(os.devnull, 'w'))
     try:
         kc = km.client()
         kc.start_channels()
@@ -75,6 +76,7 @@ def execute_kernel(nb, t):
     """
     Try to print cell by cell
     """
+    # Only one worksheet in the current ipython nbs structure
     for cell in nb.worksheets[0].cells:
 
         # If the cell is code, move to next cell
@@ -83,7 +85,7 @@ def execute_kernel(nb, t):
 
         # Otherwise the cell is an output cell, run it!
         try:
-            outs = run_cell(shell, iopub, cell, t)
+            outs = run_cell(shell, iopub, cell, t, tshell)
             print outs
         except Exception as e:
             print "failed to run cell:", repr(e)
@@ -98,5 +100,5 @@ for ipynb in sys.argv[1:]:
         with open(ipynb) as f:
             nb = reads(f.read(), 'json')
 
-        for t in [0.1, 1, 10]:
-            execute_kernel(nb, t)
+        for t in [10, 20, 40]:
+            execute_kernel(nb, 1, t)
