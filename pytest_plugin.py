@@ -48,13 +48,27 @@ class RunningKernel(object):
     """
 
     def __init__(self):
+        # We add the neccesary modules according to the parsenb.py
+        # script
         self.km = KernelManager()
-        self.km.start_kernel(stderr=open(os.devnull, 'w'))
+        self.km.start_kernel(extra_arguments=['--matplotlib=inline'],
+                             stderr=open(os.devnull, 'w'))
+        # this procedure seems to work with the newest iPython versions
         self.kc = self.km.client()
         self.kc.start_channels()
         self.shell = self.kc.shell_channel
+        # We need the iopub to read every line in the cells
+        self.iopub = self.kc.iopub_channel
+
         self.shell.execute("pass")
         self.shell.get_msg()
+
+        # I still dont know if this should go into the IPyNbCell class
+        while True:
+            try:
+                self.iopub.get_msg(timeout=1)
+            except Empty:
+                break
 
     def restart(self):
         self.km.restart_kernel(now=True)
@@ -64,6 +78,7 @@ class RunningKernel(object):
         self.km.shutdown_kernel()
         del self.km
 
+
 class IPyNbFile(pytest.File):
     def collect(self):
         with self.fspath.open() as f:
@@ -71,18 +86,41 @@ class IPyNbFile(pytest.File):
 
             cell_num = 0
 
+            # We must merge the parsenb code here!
             for ws in self.nb.worksheets:
                 for cell in ws.cells:
-                    if cell.cell_type == "code":
+                    # We need to call the iopub from the setup !
+                    # If the cell is code, move to next cell
+                    if cell.cell_type != 'code':
+                        continue
+
+                    # Otherwise the cell is an output cell, run it!
+                    try:
+                        # This is from the prsenb code:
+                        # we must change it according to this script, where
+                        # the cell inspection is made by IPyNbCell
+                        # outs = run_cell(shell, iopub, cell, t, tshell)
                         yield IPyNbCell(self.name, self, cell_num, cell)
+                        # yield?
+                        print outs
+                    except Exception as e:
+                        print "failed to run cell:", repr(e)
+                        print cell.input
+
+                    # OLD CODE:!!!!
+                    # if cell.cell_type == "code":
+                    #     yield IPyNbCell(self.name, self, cell_num, cell)
                     cell_num += 1
 
     def setup(self):
         self.fixture_cell = None
+        # Start kernel as usual. We added the
+        # iopub stuff --> how do we call it?
         self.kernel = RunningKernel()
 
     def teardown(self):
         self.kernel.stop()
+
 
 class IPyNbCell(pytest.Item):
     def __init__(self, name, parent, cell_num, cell):
@@ -98,10 +136,12 @@ class IPyNbCell(pytest.Item):
         It is very common for ipython notebooks to run through assuming a
         single kernel.
         """
-        #self.parent.kernel.restart()
+        # self.parent.kernel.restart()
 
         # Get the current shell
         shell = self.parent.kernel.shell
+        # Call iopub (TESTING!!)
+        iopub = self.parent.kernel.iopub
 
         """
         if self.parent.fixture_cell:
@@ -110,7 +150,7 @@ class IPyNbCell(pytest.Item):
 
         """
         Execute the code from the cell and get the msg_id of the shell process.
-        This is the parent header message id for subsequent 
+        This is the parent header message id for subsequent
         """
         msg_id = shell.execute(self.cell.input, allow_stdin=False)
 
@@ -171,7 +211,7 @@ class IPyNbCell(pytest.Item):
                 print "unhandled iopub msg:", msg_type
 
             outs.append(out)
-                
+
 
         """
         This message is the last message of the cell, which contains no output.
@@ -196,7 +236,7 @@ class IPyNbCell(pytest.Item):
         matches the outputs in the existing notebook.
         This code is taken from [REF].
         """
-        
+
 
 
 
@@ -217,24 +257,24 @@ class IPyNbCell(pytest.Item):
         s = re.sub(r'\[.*\] INFO:.*', 'FINMAG INFO:', s)
         s = re.sub(r'\[.*\] DEBUG:.*', 'FINMAG DEBUG:', s)
         s = re.sub(r'\[.*\] WARNING:.*', 'FINMAG WARNING:', s)
-        
+
         """
         Using the same method we strip UserWarnings from matplotlib
         """
         s = re.sub(r'.*/matplotlib/.*UserWarning:.*', 'MATPLOTLIB USERWARNING', s)
-        
+
         # Also for gmsh information lines
         s = re.sub(r'Info    :.*', 'GMSH INFO', s)
-        
+
         # normalize newline:
         s = s.replace('\r\n', '\n')
-        
+
         # ignore trailing newlines (but not space)
         s = s.rstrip('\n')
-        
+
         # normalize hex addresses:
         s = re.sub(r'0x[a-f0-9]+', '0xFFFFFFFF', s)
-        
+
         # normalize UUIDs:
         s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}', 'U-U-I-D', s)
 
