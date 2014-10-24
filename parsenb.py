@@ -7,7 +7,7 @@ Usage: `parsenb.py foo.ipynb [bar.ipynb [...]]`
 Each cell is submitted to the kernel, and the outputs are compared with those stored in the notebook.
 """
 
-import subprocess32
+# import subprocess32
 import os,sys,time
 import base64
 import re

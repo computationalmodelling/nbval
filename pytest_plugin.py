@@ -1,5 +1,9 @@
 import pytest
-import os,sys
+import os
+import sys
+# For regular expressions:
+import re
+
 try:
     from exceptions import Exception
 except:
@@ -16,12 +20,25 @@ except:
 
 from IPython.nbformat.current import reads, NotebookNode
 
+
+# Colours for outputs
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+
+
 class IPyNbException(Exception):
     """ custom exception for error reporting. """
+
 
 def pytest_collect_file(path, parent):
     if path.fnmatch("*.ipynb"):
         return IPyNbFile(path, parent)
+
 
 def get_cell_description(cell_input):
     """Gets cell description
@@ -56,12 +73,18 @@ class RunningKernel(object):
         # this procedure seems to work with the newest iPython versions
         self.kc = self.km.client()
         self.kc.start_channels()
-        self.shell = self.kc.shell_channel
         # We need the iopub to read every line in the cells
-        self.iopub = self.kc.iopub_channel
+        try:
+            self.iopub = self.kc.iopub_channel
+        except:
+            self.iopub = self.kc.sub_channel
+
+        self.shell = self.kc.shell_channel
 
         self.shell.execute("pass")
         self.shell.get_msg()
+
+        print '============= INITIATING ================='
 
         # I still dont know if this should go into the IPyNbCell class
         while True:
@@ -91,21 +114,19 @@ class IPyNbFile(pytest.File):
                 for cell in ws.cells:
                     # We need to call the iopub from the setup !
                     # If the cell is code, move to next cell
-                    if cell.cell_type != 'code':
-                        continue
+                    if cell.cell_type == 'code':
+                            yield IPyNbCell(self.name, self, cell_num, cell)
 
                     # Otherwise the cell is an output cell, run it!
-                    try:
+                    # try:
                         # This is from the prsenb code:
                         # we must change it according to this script, where
                         # the cell inspection is made by IPyNbCell
                         # outs = run_cell(shell, iopub, cell, t, tshell)
-                        yield IPyNbCell(self.name, self, cell_num, cell)
                         # yield?
-                        print outs
-                    except Exception as e:
-                        print "failed to run cell:", repr(e)
-                        print cell.input
+                    # except Exception as e:
+                    #     print "failed to run cell:", repr(e)
+                    #     print cell.input
 
                     # OLD CODE:!!!!
                     # if cell.cell_type == "code":
@@ -130,6 +151,33 @@ class IPyNbCell(pytest.Item):
         self.cell = cell
         self.cell_description = get_cell_description(self.cell.input)
 
+    # 'Compare outputs' function from the original script
+    # We have to integrate this into the main loop
+    def compare_outputs(self, test, ref, skip_compare=('png',
+                                                       'traceback',
+                                                       'latex',
+                                                       'prompt_number')):
+        for key in ref:
+            if key not in test:
+                print "missing key: %s != %s" % (test.keys(), ref.keys())
+                return False
+            elif (key not in skip_compare and self.sanitize(test[key]) !=
+                  self.sanitize(ref[key])):
+                print bcolors.FAIL + "mismatch %s:" % key + bcolors.ENDC
+                print test[key]
+                print '  !=  '
+                print ref[key]
+                print bcolors.OKBLUE + 'DEBUGGING INFO' + bcolors.ENDC
+                print '=============='
+                # print 'The absolute test string:'
+                # print sanitize(test[key])
+                # print 'failed to compare with the reference:'
+                # print sanitize(ref[key])
+                # print '---------------------------------------'
+                print "\n\n"
+                return False
+        return True
+
     def runtest(self):
         """
         Run all the cell tests in one kernel without restarting.
@@ -152,41 +200,48 @@ class IPyNbCell(pytest.Item):
         Execute the code from the cell and get the msg_id of the shell process.
         This is the parent header message id for subsequent
         """
-        msg_id = shell.execute(self.cell.input, allow_stdin=False)
+        msg_id = shell.execute(self.cell.input,
+                               allow_stdin=False)
+        # msg_id = iopub.execute(self.cell.input, allow_stdin=False)
 
         """
         if self.cell_description.lower().startswith("fixture") or self.cell_description.lower().startswith("setup"):
             self.parent.fixture_cell = self.cell
         """
 
-        timeout = 20
+        timeout = 2000
 
         # This list stores the output information for the entire cell
         outs = []
-        
+
         # Let's try to put this as in the kernel_testing: shell.get_msg outside
         # the while loop and the iopub.get_mesg inside
-        msg = shell.get_msg(block=True, timeout=timeout)
-
+        shell.get_msg(timeout=timeout)
 
         while True:
             """
-            The messages from the cell contain information such as input code, outputs generated
-            and other messages. We iterate through each message until we reach the end of the cell.
+            The messages from the cell contain information such
+            as input code, outputs generated
+            and other messages. We iterate through each message
+            until we reach the end of the cell.
             """
             try:
                 # Gets one message at a time
-                msg = iopub.get_msg(block=True, timeout=timeout)
+                msg = iopub.get_msg(timeout=1.)
+                # print msg['msg_type']
 
                 # Breaks on the last message
-                if msg.get("parent_header", None) and msg["parent_header"].get("msg_id", None) == msg_id:
+                if (msg.get("parent_header", None) and
+                        msg["parent_header"].get("msg_id", None) == msg_id):
                     break
             except Empty:
-                raise IPyNbException("Timeout of %d seconds exceeded executing cell: %s" (timeout, self.cell.input))
-
+                raise IPyNbException("Timeout of %d seconds exceeded"
+                                     " executing cell: %s" (timeout,
+                                                            self.cell.input))
 
             """
-            We want to compare the outputs of the messages to a reference output
+            We want to compare the outputs of the messages
+            to a reference output
             """
 
             # If the message isn't an output, we don't do anything else with it
@@ -217,22 +272,55 @@ class IPyNbCell(pytest.Item):
 
             outs.append(out)
 
-
         """
         This message is the last message of the cell, which contains no output.
         It only indicates whether the entire cell ran successfully or if there
         was an error.
         """
-        reply = msg['content']
-        print "Outputs are....\n\n"
+        # reply = msg['content']
+        # We have here a dictionary with all the output from a cell !!
+        # (we still need the reference)
+        # print "Outputs are....\n\n"
+        # print outs
+        # print "\n\n Reply is..... \n\n"
+        # print reply
+
+        # We need to get the reference from the outputs that are already
+        # in the notebook
+        print '============= REFERENCE ??? ======== \n'
+        print self.cell.outputs
+        print '\n\n'
+
+        # We need to get the reference from the outputs that are already
+        # in the notebook
+        print '============= OUTPUT ??? ======== \n'
         print outs
-        print "\n\n Reply is..... \n\n"
-        print reply
+        print '\n\n'
+
+
+        failed = False
+        for out, ref in zip(outs, self.cell.outputs):
+            # print '\n This is the output: \n'
+            # print out
+            # print '\n'
+            # print 'This is the reference:\n'
+            # print ref
+            # print '\n'
+            if not self.compare_outputs(out, ref):
+                failed = True
+        # if failed:
+        #     failures += 1
+        # else:
+        #     successes += 1
+        # sys.stdout.write('.')
 
         raise NotImplementedError
 
-        if reply['status'] == 'error':
-            raise IPyNbException(self.cell_num, self.cell_description, self.cell.input, '\n'.join(reply['traceback']))
+        # if reply['status'] == 'error':
+        if not failed:  # Use this to make the test fail
+            raise IPyNbException(self.cell_num, self.cell_description,
+                                 self.cell.input,
+                                 '\n'.join(reply['traceback']))
 
         """
         The pytest exception will be raised if there are any
@@ -242,10 +330,7 @@ class IPyNbCell(pytest.Item):
         This code is taken from [REF].
         """
 
-
-
-
-    def sanitize(s):
+    def sanitize(self, s):
         """sanitize a string for comparison.
 
         fix universal newlines, strip trailing newlines, and normalize likely random values (memory addresses and UUIDs)
