@@ -163,6 +163,11 @@ class IPyNbCell(pytest.Item):
 
         # This list stores the output information for the entire cell
         outs = []
+        
+        # Let's try to put this as in the kernel_testing: shell.get_msg outside
+        # the while loop and the iopub.get_mesg inside
+        msg = shell.get_msg(block=True, timeout=timeout)
+
 
         while True:
             """
@@ -171,7 +176,7 @@ class IPyNbCell(pytest.Item):
             """
             try:
                 # Gets one message at a time
-                msg = shell.get_msg(block=True, timeout=timeout)
+                msg = iopub.get_msg(block=True, timeout=timeout)
 
                 # Breaks on the last message
                 if msg.get("parent_header", None) and msg["parent_header"].get("msg_id", None) == msg_id:
