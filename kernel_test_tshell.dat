@@ -1,0 +1,246 @@
+---------------------------------------------------------------------------
+OperationalError                          Traceback (most recent call last)
+<string> in <module>()
+
+/usr/local/lib/python2.7/dist-packages/IPython/kernel/zmq/kernelapp.pyc in main()
+    466     """Run an IPKernel as an application"""
+    467     app = IPKernelApp.instance()
+--> 468     app.initialize()
+        app.initialize = <bound method IPKernelApp.initialize of <IPython.kernel.zmq.kernelapp.IPKernelApp object at 0x7fe830b4f910>>
+    469     app.start()
+    470 
+
+/usr/local/lib/python2.7/dist-packages/IPython/kernel/zmq/kernelapp.pyc in initialize(self=<IPython.kernel.zmq.kernelapp.IPKernelApp object>, argv=None)
+
+/usr/local/lib/python2.7/dist-packages/IPython/config/application.pyc in catch_config_error(method=<function initialize>, app=<IPython.kernel.zmq.kernelapp.IPKernelApp object>, *args=(None,), **kwargs={})
+     90     """
+     91     try:
+---> 92         return method(app, *args, **kwargs)
+        method = <function initialize at 0x7fe830a1a500>
+        app = <IPython.kernel.zmq.kernelapp.IPKernelApp object at 0x7fe830b4f910>
+        args = (None,)
+        kwargs = {}
+     93     except (TraitError, ArgumentError) as e:
+     94         app.print_help()
+
+/usr/local/lib/python2.7/dist-packages/IPython/kernel/zmq/kernelapp.pyc in initialize(self=<IPython.kernel.zmq.kernelapp.IPKernelApp object>, argv=None)
+    440         self.init_io()
+    441         self.init_signal()
+--> 442         self.init_kernel()
+        self.init_kernel = <bound method IPKernelApp.init_kernel of <IPython.kernel.zmq.kernelapp.IPKernelApp object at 0x7fe830b4f910>>
+    443         # shell init steps
+    444         self.init_path()
+
+/usr/local/lib/python2.7/dist-packages/IPython/kernel/zmq/kernelapp.pyc in init_kernel(self=<IPython.kernel.zmq.kernelapp.IPKernelApp object>)
+    395                                 log=self.log,
+    396                                 profile_dir=self.profile_dir,
+--> 397                                 user_ns=self.user_ns,
+        global user_ns = undefined
+        self.user_ns = None
+    398         )
+    399         kernel.record_ports(self.ports)
+
+/usr/local/lib/python2.7/dist-packages/IPython/kernel/zmq/ipkernel.pyc in __init__(self=<IPython.kernel.zmq.ipkernel.Kernel object>, **kwargs={'iopub_socket': <zmq.sugar.socket.Socket object>, 'log': <logging.Logger object>, 'parent': <IPython.kernel.zmq.kernelapp.IPKernelApp object>, 'profile_dir': <IPython.core.profiledir.ProfileDir object>, 'session': <IPython.kernel.zmq.session.Session object>, 'shell_streams': [<zmq.eventloop.zmqstream.ZMQStream object>, <zmq.eventloop.zmqstream.ZMQStream object>], 'stdin_socket': <zmq.sugar.socket.Socket object>, 'user_ns': None})
+    143             user_module = self.user_module,
+    144             user_ns     = self.user_ns,
+--> 145             kernel      = self,
+        global kernel = undefined
+        self = <IPython.kernel.zmq.ipkernel.Kernel object at 0x7fe830786710>
+    146         )
+    147         self.shell.displayhook.session = self.session
+
+/usr/local/lib/python2.7/dist-packages/IPython/config/configurable.pyc in instance(cls=<class 'IPython.kernel.zmq.zmqshell.ZMQInteractiveShell'>, *args=(), **kwargs={'kernel': <IPython.kernel.zmq.ipkernel.Kernel object>, 'parent': <IPython.kernel.zmq.ipkernel.Kernel object>, 'profile_dir': <IPython.core.profiledir.ProfileDir object>, 'user_module': None, 'user_ns': None})
+    352         # Create and save the instance
+    353         if cls._instance is None:
+--> 354             inst = cls(*args, **kwargs)
+        inst = undefined
+        cls = <class 'IPython.kernel.zmq.zmqshell.ZMQInteractiveShell'>
+        args = ()
+        kwargs = {'kernel': <IPython.kernel.zmq.ipkernel.Kernel object at 0x7fe830786710>, 'user_ns': None, 'profile_dir': <IPython.core.profiledir.ProfileDir object at 0x7fe830a2e2d0>, 'parent': <IPython.kernel.zmq.ipkernel.Kernel object at 0x7fe830786710>, 'user_module': None}
+    355             # Now make sure that the instance will also be returned by
+    356             # parent classes' _instance attribute.
+
+/usr/local/lib/python2.7/dist-packages/IPython/core/interactiveshell.pyc in __init__(self=<IPython.kernel.zmq.zmqshell.ZMQInteractiveShell object>, ipython_dir=None, profile_dir=<IPython.core.profiledir.ProfileDir object>, user_module=None, user_ns=None, custom_exceptions=((), None), **kwargs={'kernel': <IPython.kernel.zmq.ipkernel.Kernel object>, 'parent': <IPython.kernel.zmq.ipkernel.Kernel object>})
+    463         self.db = PickleShareDB(os.path.join(self.profile_dir.location, 'db'))
+    464 
+--> 465         self.init_history()
+        self.init_history = <bound method ZMQInteractiveShell.init_history of <IPython.kernel.zmq.zmqshell.ZMQInteractiveShell object at 0x7fe830786810>>
+    466         self.init_encoding()
+    467         self.init_prefilter()
+
+/usr/local/lib/python2.7/dist-packages/IPython/core/interactiveshell.pyc in init_history(self=<IPython.kernel.zmq.zmqshell.ZMQInteractiveShell object>)
+   1519     def init_history(self):
+   1520         """Sets up the command history, and starts regular autosaves."""
+-> 1521         self.history_manager = HistoryManager(shell=self, parent=self)
+        self.history_manager = None
+        global HistoryManager = <class 'IPython.core.history.HistoryManager'>
+        global shell = undefined
+        self = <IPython.kernel.zmq.zmqshell.ZMQInteractiveShell object at 0x7fe830786810>
+        global parent = undefined
+   1522         self.configurables.append(self.history_manager)
+   1523 
+
+/usr/local/lib/python2.7/dist-packages/IPython/core/history.pyc in __init__(self=<IPython.core.history.HistoryManager object>, shell=<IPython.kernel.zmq.zmqshell.ZMQInteractiveShell object>, config=None, **traits={'parent': <IPython.kernel.zmq.zmqshell.ZMQInteractiveShell object>})
+    496             self.save_thread.start()
+    497 
+--> 498         self.new_session()
+        self.new_session = <bound method HistoryManager.new_session of <IPython.core.history.HistoryManager object at 0x7fe830786e90>>
+    499 
+    500     def _get_hist_file_name(self, profile=None):
+
+/usr/local/lib/python2.7/dist-packages/IPython/core/history.pyc in new_session(self=<IPython.core.history.HistoryManager object>, conn=None)
+
+/usr/local/lib/python2.7/dist-packages/IPython/core/history.pyc in needs_sqlite(f=<function new_session>, self=<IPython.core.history.HistoryManager object>, *a=(None,), **kw={})
+     66         return []
+     67     else:
+---> 68         return f(self, *a, **kw)
+        f = <function new_session at 0x7fe834ee3a28>
+        self = <IPython.core.history.HistoryManager object at 0x7fe830786e90>
+        a = (None,)
+        kw = {}
+     69 
+     70 
+
+/usr/local/lib/python2.7/dist-packages/IPython/core/history.pyc in new_session(self=<IPython.core.history.HistoryManager object>, conn=<sqlite3.Connection object>)
+    514         with conn:
+    515             cur = conn.execute("""INSERT INTO sessions VALUES (NULL, ?, NULL,
+--> 516                             NULL, "") """, (datetime.datetime.now(),))
+        global NULL = undefined
+        global Close = undefined
+        global the = undefined
+        global database = undefined
+        global session = undefined
+        global filling = undefined
+        global end = undefined
+        global time = undefined
+        global line = undefined
+        global count.UPDATE = undefined
+        global sessions = undefined
+        global SET = undefined
+        global num_cmds = undefined
+        global WHERE = undefined
+    517             self.session_number = cur.lastrowid
+    518             
+
+OperationalError: database is locked
+testing /home/david/hg/finmag/doc/ipython_notebooks_src/tutorial-import-custom-mesh.ipynb
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+# This tutorial was written for use with dolfin version 1.3.0.
+import finmag
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+import textwrap
+
+title = "tutorial-import-custom-mesh"
+
+# Populate the mesh ".geo" file with points, lines, line loops and physical surfaces.
+meshText = textwrap.dedent("""
+    /* This is a mesh created by the %s notebook. */
+    Point(1) = {0, 0, 0, 5};
+    Point(2) = {100, 0, 0, 5};
+    Point(3) = {100, 100, 0, 5};
+    Point(4) = {0, 100, 0, 5};
+
+    Line(1) = {1, 2};
+    Line(2) = {2, 3};
+    Line(3) = {3, 4};
+    Line(4) = {4, 1};
+    Line(5) = {3, 1};
+
+    Line Loop(1) = {1, 2, 5};
+    Line Loop(2) = {3, 4, -5};
+
+    Plane Surface(1) = {1};
+    Plane Surface(2) = {2};
+
+    Physical Surface(1) = {1};
+    Physical Surface(2) = {2};
+    """ % title)
+
+# Write to the ".geo" file.
+meshTextOut = open(title + ".geo", "w")
+meshTextOut.write(meshText)
+meshTextOut.close()
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+# If one wants to perform this all from a python prompt, using the
+# "system" function from the os module will produce identical results.
+
+# Mesh the geo file defined earlier.
+!gmsh {title}.geo -2 -o {title}.msh
+
+# Convert the mesh into a dolfin-compatible ".xml" mesh.
+print
+!dolfin-convert {title}.msh {title}.xml
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+# Import dolfin and create our mesh object.
+import dolfin as df
+mesh = df.Mesh(title + ".xml")
+
+# We can also take a look at our shiny custom mesh. Note the diagonal line defining the different regions from the bottom-left
+# corner to the lower-right corner.
+# df.plot(mesh)
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+myMeshFunction = df.MeshFunction("size_t", mesh, title + "_physical_region.xml")
+print("Cell 0 has value {}, and cell -1 has value {}.".format(myMeshFunction[0], myMeshFunction[-1]))
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+import numpy as np
+
+# Define a function that takes a position on the mesh, and returns the magnetisation at that point.
+def m_Func(pos):
+    
+    # Convert the position vector into a dolfin Point object.
+    point = df.Point(*pos)
+    
+    # Find the index of the cell corresponding to this position.
+    index = mesh.bounding_box_tree().compute_first_entity_collision(point)
+    
+    # Resolve the meshfunction at this index, and normalise to be either 1 or -1.
+    ID = myMeshFunction[index] * 2 - 3
+    
+    # Return the corresponding magnetisation value.
+    return np.array([0, 0, ID])
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+sim = finmag.Simulation(mesh, 1e5, name=title, unit_length=1e-9)
+sim.set_m(m_Func)
+sim.render_scene(color_by_axis='z', add_glyphs=False, use_display=0)
+
+
+ =========== RUNNING CELL for timeout=1 ================ 
+
+
+failed to run cell: Empty()
+

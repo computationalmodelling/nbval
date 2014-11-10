@@ -1,0 +1,7 @@
+Copy the plugin as:
+
+sudo cp pytest_plugin.py /usr/local/lib/python2.7/dist-packages/pytest_ipynb/plugin.py
+
+
+AFTER installing the ipython test plugin
+(we are replacing the current test)

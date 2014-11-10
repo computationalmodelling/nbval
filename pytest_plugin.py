@@ -70,28 +70,31 @@ class RunningKernel(object):
         self.km = KernelManager()
         self.km.start_kernel(extra_arguments=['--matplotlib=inline'],
                              stderr=open(os.devnull, 'w'))
-        # this procedure seems to work with the newest iPython versions
-        self.kc = self.km.client()
-        self.kc.start_channels()
         # We need the iopub to read every line in the cells
         try:
+            # this procedure seems to work with the newest iPython versions
+            self.kc = self.km.client()
+            self.kc.start_channels()
+
             self.iopub = self.kc.iopub_channel
         except:
+            self.kc = self.km
+            self.kc.start_channels()
             self.iopub = self.kc.sub_channel
 
         self.shell = self.kc.shell_channel
 
-        self.shell.execute("pass")
-        self.shell.get_msg()
+        # self.shell.execute("pass")
+        # self.shell.get_msg()
 
-        print '============= INITIATING ================='
+        # print '============= INITIATING ================='
 
         # I still dont know if this should go into the IPyNbCell class
-        while True:
-            try:
-                self.iopub.get_msg(timeout=1)
-            except Empty:
-                break
+        # while True:
+        #     try:
+        #         print self.iopub.get_msg(timeout=1)
+        #     except Empty:
+        #         break
 
     def restart(self):
         self.km.restart_kernel(now=True)
@@ -136,7 +139,6 @@ class IPyNbFile(pytest.File):
     def setup(self):
         self.fixture_cell = None
         # Start kernel as usual. We added the
-        # iopub stuff --> how do we call it?
         self.kernel = RunningKernel()
 
     def teardown(self):
@@ -202,7 +204,6 @@ class IPyNbCell(pytest.Item):
         """
         msg_id = shell.execute(self.cell.input,
                                allow_stdin=False)
-        # msg_id = iopub.execute(self.cell.input, allow_stdin=False)
 
         """
         if self.cell_description.lower().startswith("fixture") or self.cell_description.lower().startswith("setup"):
@@ -217,7 +218,7 @@ class IPyNbCell(pytest.Item):
         # Let's try to put this as in the kernel_testing: shell.get_msg outside
         # the while loop and the iopub.get_mesg inside
         shell.get_msg(timeout=timeout)
-
+        
         while True:
             """
             The messages from the cell contain information such
@@ -227,18 +228,24 @@ class IPyNbCell(pytest.Item):
             """
             try:
                 # Gets one message at a time
-                msg = iopub.get_msg(timeout=1.)
-                # print msg['msg_type']
+                msg = iopub.get_msg(timeout=5.)
+                # print '== IOPUB STUFF ==='
+                # print msg['content']
+                #print 'TYPEEEE'
+                #print msg['msg_type']
 
                 # Breaks on the last message
-                if (msg.get("parent_header", None) and
-                        msg["parent_header"].get("msg_id", None) == msg_id):
-                    break
+                # if (msg.get("parent_header", None) and
+                #         msg["parent_header"].get("msg_id", None) == msg_id):
+                #     break
             except Empty:
-                raise IPyNbException("Timeout of %d seconds exceeded"
-                                     " executing cell: %s" (timeout,
-                                                            self.cell.input))
-
+                # This is not working: ! The code will not be checked
+                # if the time is out (when the cell stops to be executed?)
+                # raise IPyNbException("Timeout of %d seconds exceeded"
+                #                      " executing cell: %s" (timeout,
+                #                                             self.cell.input))
+                # This is better:
+                    break
             """
             We want to compare the outputs of the messages
             to a reference output
@@ -246,13 +253,22 @@ class IPyNbCell(pytest.Item):
 
             # If the message isn't an output, we don't do anything else with it
             msg_type = msg['msg_type']
+            
+            # print 'TYPEEE 2:'
+            # print msg_type
             if msg_type in ('status', 'pyin'):
                 continue
-            elif msg_type == 'clear_output':
+            # elif msg_type == 'clear_output':
+            #     outs = []
+            #     continue
+            # I added the msg_type 'idle' condition (when the cell stops)
+            elif (msg_type == 'clear_output' 
+                  and msg_type['execution_state'] == 'idle'):
                 outs = []
                 continue
 
             reply = msg['content']
+            
             out = NotebookNode(output_type=msg_type)
 
             # Now check what type of output it is
@@ -269,7 +285,9 @@ class IPyNbCell(pytest.Item):
                     out.prompt_number = reply['execution_count']
             else:
                 print "unhandled iopub msg:", msg_type
-
+            
+            # print 'OUT STATUS ========='
+            # print outs
             outs.append(out)
 
         """
@@ -277,7 +295,7 @@ class IPyNbCell(pytest.Item):
         It only indicates whether the entire cell ran successfully or if there
         was an error.
         """
-        # reply = msg['content']
+        reply = msg['content']
         # We have here a dictionary with all the output from a cell !!
         # (we still need the reference)
         # print "Outputs are....\n\n"
@@ -314,13 +332,22 @@ class IPyNbCell(pytest.Item):
         #     successes += 1
         # sys.stdout.write('.')
 
-        raise NotImplementedError
-
+        # raise NotImplementedError
+        
         # if reply['status'] == 'error':
-        if not failed:  # Use this to make the test fail
-            raise IPyNbException(self.cell_num, self.cell_description,
+        # Traceback is only when an error is raised (?)
+        # We usually get an exception because traceback is not defined
+        if failed:  # Use this to make the test fail
+            # raise IPyNbException(self.cell_num,
+            #                      self.cell_description,
+            #                      self.cell.input,
+            #                      '\n'.join(reply['traceback']))
+            raise IPyNbException(self.cell_num,
+                                 self.cell_description,
                                  self.cell.input,
-                                 '\n'.join(reply['traceback']))
+                                 # Here we must put the difference
+                                 '\n'.join('FAILED'))
+
 
         """
         The pytest exception will be raised if there are any
