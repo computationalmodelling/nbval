@@ -28,6 +28,12 @@ and how the system works, can be found here
 http://ipython.org/ipython-doc/stable/development/messaging.html
 
 
+Our extension is based on the code of a testing system for notebooks
+
+https://gist.github.com/minrk/2620735
+
+which we integrated and mixed with the `py.test` system.
+
 ## Execution
 To execute this plugin, you need to do
 
@@ -100,3 +106,20 @@ mismatch text:
  0.7619880389423896]
 
 ```
+
+Currently, image files are not compared, but from the original script,
+it can be implemented a function to take this into account
+in the future.
+
+## Sanitise
+In the script there is a `sanitise` function that gets rid of strings
+that are likely to fail, due to the execution dependent outputs
+(such as timestamps, library versions, etc.) that some of the
+code blocks produce. This function can be modified and extended to
+suit the needs of iPython notebooks that use a specific Python library.
+
+In the future, we can export this function to an external file with a
+series of `regex` expressions or strings that need to be sanitised
+in the notebook outputs.
+
+
