@@ -1,3 +1,22 @@
+title:: py.test plugin for iPython notebooks
+
+
+pytest ipython plugin modification
+
+Authors: D. Cortes, O. Laslett
+
+For now, install pytest-ipynb plugin (
+https://github.com/zonca/pytest-ipynb ) :
+
+    sudo pip install pytest-ipynb
+
+And replace the file with:
+
+    sudo cp pytest_plugin.py /usr/local/lib/python2.7/dist-packages/pytest_ipynb/plugin.py
+
+
+
+
 Copy the plugin as:
 
 sudo cp pytest_plugin.py /usr/local/lib/python2.7/dist-packages/pytest_ipynb/plugin.py

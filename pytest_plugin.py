@@ -57,7 +57,8 @@ def pytest_collect_file(path, parent):
 
 
 def get_cell_description(cell_input):
-    """Gets cell description
+    """
+    Gets cell description
 
     Cell description is the first line of a cell,
     in one of this formats:
@@ -69,7 +70,7 @@ def get_cell_description(cell_input):
     try:
         first_line = cell_input.split("\n")[0]
         if first_line.startswith(('"', '#', 'def')):
-            return first_line.replace('"','').replace("#",'').replace('def ', '').replace("_", " ").strip()
+            return first_line.replace('"', '').replace("#", '').replace('def ', '').replace("_", " ").strip()
     except:
         pass
     return "no description"
@@ -183,6 +184,9 @@ class IPyNbCell(pytest.Item):
         self.cell = cell
         self.cell_description = get_cell_description(self.cell.input)
 
+        #
+        self.comparisons = None
+
     def compare_outputs(self, test, ref, skip_compare=('png',
                                                        'traceback',
                                                        'latex',
@@ -190,24 +194,39 @@ class IPyNbCell(pytest.Item):
         """
 
         """
+        self.comparisons = []
+
         for key in ref:
             if key not in test:
                 print "missing key: %s != %s" % (test.keys(), ref.keys())
                 return False
             elif (key not in skip_compare and self.sanitize(test[key]) !=
                   self.sanitize(ref[key])):
-                print bcolors.FAIL + "mismatch %s:" % key + bcolors.ENDC
-                print test[key]
-                print '  !=  '
-                print ref[key]
-                print bcolors.OKBLUE + 'DEBUGGING INFO' + bcolors.ENDC
-                print '=============='
+
+                self.comparisons.append(bcolors.FAIL
+                                        + "mismatch %s:" % key
+                                        + bcolors.ENDC)
+                self.comparisons.append(test[key])
+                self.comparisons.append('  !=  ')
+                self.comparisons.append(ref[key])
+                # self.comparisons.append('==============')
+                # self.comparisons.append('The absolute test string:')
+                # self.comparisons.append(self.sanitize(test[key]))
+                # self.comparisons.append('failed to compare with the reference:')
+                # self.comparisons.append(self.sanitize(ref[key]))
+
+                # print bcolors.FAIL + "mismatch %s:" % key + bcolors.ENDC
+                # print test[key]
+                # print '  !=  '
+                # print ref[key]
+                # print bcolors.OKBLUE + 'DEBUGGING INFO' + bcolors.ENDC
+                # print '=============='
                 # print 'The absolute test string:'
                 # print sanitize(test[key])
                 # print 'failed to compare with the reference:'
                 # print sanitize(ref[key])
                 # print '---------------------------------------'
-                print "\n\n"
+                # print "\n\n"
                 return False
         return True
 
@@ -327,7 +346,7 @@ class IPyNbCell(pytest.Item):
                 continue
 
             # WE COULD ADD HERE a condition for the 'pyerr' message type
-            # Making the cell to fail
+            # Making the test to fail
 
             """
             Now we get the reply from the piece of code executed
@@ -365,36 +384,26 @@ class IPyNbCell(pytest.Item):
         was an error.
         """
         reply = msg['content']
-        # We have here a dictionary with all the output from a cell !!
-        # (we still need the reference)
-        # print "Outputs are....\n\n"
+
+        # DEBUG::::::::::::::::::::::::::::::::::::::::::::::::::
+        # We need to get the reference from the outputs that are already
+        # in the notebook
+        # print '============= REFERENCE ??? ======== \n'
+        # print self.cell.outputs
+        # print '\n\n'
+
+        # We need to get the reference from the outputs that are already
+        # in the notebook
+        # print '============= OUTPUT ??? ======== \n'
         # print outs
-        # print "\n\n Reply is..... \n\n"
-        # print reply
-
-        # We need to get the reference from the outputs that are already
-        # in the notebook
-        print '============= REFERENCE ??? ======== \n'
-        print self.cell.outputs
-        print '\n\n'
-
-        # We need to get the reference from the outputs that are already
-        # in the notebook
-        print '============= OUTPUT ??? ======== \n'
-        print outs
-        print '\n\n'
-
+        # print '\n\n'
+        # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         failed = False
         for out, ref in zip(outs, self.cell.outputs):
-            # print '\n This is the output: \n'
-            # print out
-            # print '\n'
-            # print 'This is the reference:\n'
-            # print ref
-            # print '\n'
             if not self.compare_outputs(out, ref):
                 failed = True
+
         # if failed:
         #     failures += 1
         # else:
@@ -405,31 +414,31 @@ class IPyNbCell(pytest.Item):
 
         # if reply['status'] == 'error':
         # Traceback is only when an error is raised (?)
+
         # We usually get an exception because traceback is not defined
         if failed:  # Use this to make the test fail
             # raise IPyNbException(self.cell_num,
             #                      self.cell_description,
             #                      self.cell.input,
             #                      '\n'.join(reply['traceback']))
+            """
+            The pytest exception will be raised if there are any
+            errors in the notebook cells. Now we check that
+            the outputs produced from running each cell
+            matches the outputs in the existing notebook.
+            This code is taken from [REF].
+            """
             raise IPyNbException(self.cell_num,
                                  self.cell_description,
                                  self.cell.input,
-                                 # Here we must put the difference
-                                 '\n'.join('FAILED'))
-
-
-        """
-        The pytest exception will be raised if there are any
-        errors in the notebook cells. Now we check that
-        the outputs produced from running each cell
-        matches the outputs in the existing notebook.
-        This code is taken from [REF].
-        """
+                                 # Here we must put the traceback output:
+                                 '\n'.join(self.comparisons))
 
     def sanitize(self, s):
         """sanitize a string for comparison.
 
-        fix universal newlines, strip trailing newlines, and normalize likely random values (memory addresses and UUIDs)
+        fix universal newlines, strip trailing newlines,
+        and normalize likely random values (memory addresses and UUIDs)
         """
         if not isinstance(s, basestring):
             return s
@@ -447,7 +456,8 @@ class IPyNbCell(pytest.Item):
         """
         Using the same method we strip UserWarnings from matplotlib
         """
-        s = re.sub(r'.*/matplotlib/.*UserWarning:.*', 'MATPLOTLIB USERWARNING', s)
+        s = re.sub(r'.*/matplotlib/.*UserWarning:.*',
+                   'MATPLOTLIB USERWARNING', s)
 
         # Also for gmsh information lines
         s = re.sub(r'Info    :.*', 'GMSH INFO', s)
@@ -462,7 +472,8 @@ class IPyNbCell(pytest.Item):
         s = re.sub(r'0x[a-f0-9]+', '0xFFFFFFFF', s)
 
         # normalize UUIDs:
-        s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}', 'U-U-I-D', s)
+        s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}',
+                   'U-U-I-D', s)
 
         return s
 
