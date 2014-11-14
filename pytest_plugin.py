@@ -58,6 +58,7 @@ def get_cell_description(cell_input):
         pass
     return "no description"
 
+
 class RunningKernel(object):
     """
     Running a Kernel in IPython, info can be found at:
@@ -65,12 +66,11 @@ class RunningKernel(object):
     """
 
     def __init__(self):
-        # We add the neccesary modules according to the parsenb.py
-        # script
+        # Start an ipython kernel
         self.km = KernelManager()
         self.km.start_kernel(extra_arguments=['--matplotlib=inline'],
                              stderr=open(os.devnull, 'w'))
-        # We need the iopub to read every line in the cells
+        # We need iopub to read every line in the cells
         """
         http://ipython.org/ipython-doc/stable/development/messaging.html
 
@@ -95,6 +95,7 @@ class RunningKernel(object):
             self.kc.start_channels()
             self.iopub = self.kc.iopub_channel
         except:
+            # Otherwise load it as
             self.kc = self.km
             self.kc.start_channels()
             self.iopub = self.kc.sub_channel
