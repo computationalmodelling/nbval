@@ -1,20 +1,20 @@
-[10:34:11] DEBUG: Creating DataWriter for file 'barmini.ndt'
-[10:34:11] INFO: Creating Sim object 'barmini' (rank=0/1).
-[10:34:11] INFO: <Mesh of topological dimension 3 (tetrahedra) with 45 vertices and 96 cells, ordered>
-[10:34:11] DEBUG: Creating LLG object.
-[10:34:11] DEBUG: Creating Exchange object with method box-matrix-petsc,  in Jacobian.
-[10:34:11] DEBUG: Adding interaction Exchange to simulation.
-[10:34:11] DEBUG: Creating Demag object with solver 'FK'.
-[10:34:11] DEBUG: Demag parameters now: {'phi_1': {'absolute_tolerance': 1e-06, 'relative_tolerance': 1e-06, 'maximum_iterations': 10000}, 'phi_2': {'absolute_tolerance': 1e-06, 'relative_tolerance': 1e-06, 'maximum_iterations': 10000}, 'phi_2_solver': 'default', 'phi_2_preconditioner': 'default', 'phi_1_preconditioner': 'default', 'phi_1_solver': 'default'}
-[10:34:11] DEBUG: Adding interaction Demag to simulation.
-[10:34:11] DEBUG: Using Krylov solver for demag.
-[10:34:11] DEBUG: Creating macro-geometry with demag 1 x 1 tiles (dxdy: 3.0 x 3.0)
-[10:34:11] DEBUG: Boundary element matrix uses 0.01 MB of memory.
-[10:34:11] DEBUG: Successfully created simulation 'barmini'
-[10:34:16] INFO: Simulation will run until t = 1e-10 s.
-[10:34:16] INFO: Create integrator sundials with kwargs={}
-[10:34:16] DEBUG: Creating integrator with backend sundials.
-[10:34:16] DEBUG: Updating get method for steps in TableWriter(name=barmini.ndt)
-[10:34:16] DEBUG: Updating get method for last_step_dt in TableWriter(name=barmini.ndt)
-[10:34:16] DEBUG: Updating get method for dmdt in TableWriter(name=barmini.ndt)
-[10:34:17] INFO: Simulation has reached time t = 1e-10 s.
+[14:39:35] DEBUG: Creating DataWriter for file 'barmini.ndt'
+[14:39:35] INFO: Creating Sim object 'barmini' (rank=0/1).
+[14:39:35] INFO: <Mesh of topological dimension 3 (tetrahedra) with 45 vertices and 96 cells, ordered>
+[14:39:35] DEBUG: Creating LLG object.
+[14:39:35] DEBUG: Creating Exchange object with method box-matrix-petsc,  in Jacobian.
+[14:39:35] DEBUG: Adding interaction Exchange to simulation.
+[14:39:35] DEBUG: Creating Demag object with solver 'FK'.
+[14:39:35] DEBUG: Demag parameters now: {'phi_1': {'absolute_tolerance': 1e-06, 'relative_tolerance': 1e-06, 'maximum_iterations': 10000}, 'phi_2': {'absolute_tolerance': 1e-06, 'relative_tolerance': 1e-06, 'maximum_iterations': 10000}, 'phi_2_solver': 'default', 'phi_2_preconditioner': 'default', 'phi_1_preconditioner': 'default', 'phi_1_solver': 'default'}
+[14:39:35] DEBUG: Adding interaction Demag to simulation.
+[14:39:35] DEBUG: Using Krylov solver for demag.
+[14:39:35] DEBUG: Creating macro-geometry with demag 1 x 1 tiles (dxdy: 3.0 x 3.0)
+[14:39:35] DEBUG: Boundary element matrix uses 0.01 MB of memory.
+[14:39:35] DEBUG: Successfully created simulation 'barmini'
+[14:39:40] INFO: Simulation will run until t = 1e-10 s.
+[14:39:40] INFO: Create integrator sundials with kwargs={}
+[14:39:40] DEBUG: Creating integrator with backend sundials.
+[14:39:40] DEBUG: Updating get method for steps in TableWriter(name=barmini.ndt)
+[14:39:40] DEBUG: Updating get method for last_step_dt in TableWriter(name=barmini.ndt)
+[14:39:40] DEBUG: Updating get method for dmdt in TableWriter(name=barmini.ndt)
+[14:39:50] INFO: Simulation has reached time t = 1e-10 s.

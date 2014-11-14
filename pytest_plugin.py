@@ -1,3 +1,19 @@
+"""
+pytest ipython plugin modification
+
+Authors: D. Cortes, O. Laslett
+
+For now, install pytest-ipynb plugin (
+https://github.com/zonca/pytest-ipynb ) :
+
+    sudo pip install pytest-ipynb
+
+And replace the file with:
+
+    sudo cp pytest_plugin.py /usr/local/lib/python2.7/dist-packages/pytest_ipynb/plugin.py
+
+"""
+
 import pytest
 import os
 import sys
@@ -74,7 +90,7 @@ class RunningKernel(object):
         """
         http://ipython.org/ipython-doc/stable/development/messaging.html
 
-        IOPub: this socket is the ‘broadcast channel’ where the kernel
+        IOPub: this socket is the 'broadcast channel' where the kernel
         publishes all side effects (stdout, stderr, etc.) as well as the
         requests coming from any client over the shell socket and its
         own requests on the stdin socket. There are a number of actions
@@ -90,7 +106,7 @@ class RunningKernel(object):
         (if we get an error, check the msg_type and make the test to fail)
         """
         try:
-            # this procedure seems to work with the newest iPython versions
+            # This procedure seems to work with the newest iPython versions
             self.kc = self.km.client()
             self.kc.start_channels()
             self.iopub = self.kc.iopub_channel
@@ -100,20 +116,11 @@ class RunningKernel(object):
             self.kc.start_channels()
             self.iopub = self.kc.sub_channel
 
+        # Start the shell to execute cels in the notebook (send messages?)
         self.shell = self.kc.shell_channel
 
-        # self.shell.execute("pass")
-        # self.shell.get_msg()
-
-        # print '============= INITIATING ================='
-
-        # I still dont know if this should go into the IPyNbCell class
-        # while True:
-        #     try:
-        #         print self.iopub.get_msg(timeout=1)
-        #     except Empty:
-        #         break
-
+    # These options are in case we wanted to restart the nb every time
+    # it is executed a certain task
     def restart(self):
         self.km.restart_kernel(now=True)
 
@@ -124,17 +131,21 @@ class RunningKernel(object):
 
 
 class IPyNbFile(pytest.File):
+    # Read through the specified notebooks and load the data
+    # (which is in json format)
     def collect(self):
         with self.fspath.open() as f:
             self.nb = reads(f.read(), 'json')
 
+            # Start the cell count
             cell_num = 0
 
-            # We must merge the parsenb code here!
+            # Currently there is only 1 worksheet (it seems in newer versions
+            # of iPython, they are going to get rid of this option)
+            # For every worksheet, read every cell associated to it
             for ws in self.nb.worksheets:
                 for cell in ws.cells:
-                    # We need to call the iopub from the setup !
-                    # If the cell is code, move to next cell
+                    # Skip the cells that have text, headings or related stuff
                     if cell.cell_type == 'code':
                             yield IPyNbCell(self.name, self, cell_num, cell)
 
@@ -149,14 +160,12 @@ class IPyNbFile(pytest.File):
                     #     print "failed to run cell:", repr(e)
                     #     print cell.input
 
-                    # OLD CODE:!!!!
-                    # if cell.cell_type == "code":
-                    #     yield IPyNbCell(self.name, self, cell_num, cell)
+                    # Update 'code' cell count
                     cell_num += 1
 
+    # Start the kernel with this function
     def setup(self):
         self.fixture_cell = None
-        # Start kernel as usual. We added the
         self.kernel = RunningKernel()
 
     def teardown(self):
@@ -167,16 +176,20 @@ class IPyNbCell(pytest.Item):
     def __init__(self, name, parent, cell_num, cell):
         super(IPyNbCell, self).__init__(name, parent)
 
+        # Get the numbers
+        # We should get rid of the description (not giving
+        # relevant information)
         self.cell_num = cell_num
         self.cell = cell
         self.cell_description = get_cell_description(self.cell.input)
 
-    # 'Compare outputs' function from the original script
-    # We have to integrate this into the main loop
     def compare_outputs(self, test, ref, skip_compare=('png',
                                                        'traceback',
                                                        'latex',
                                                        'prompt_number')):
+        """
+
+        """
         for key in ref:
             if key not in test:
                 print "missing key: %s != %s" % (test.keys(), ref.keys())
@@ -206,9 +219,9 @@ class IPyNbCell(pytest.Item):
         """
         # self.parent.kernel.restart()
 
-        # Get the current shell
+        # Get the current shell for executing code cells
         shell = self.parent.kernel.shell
-        # Call iopub (TESTING!!)
+        # Call iopub to get the messages from the executions
         iopub = self.parent.kernel.iopub
 
         """
@@ -216,27 +229,31 @@ class IPyNbCell(pytest.Item):
             shell.execute(self.parent.fixture_cell.input, allow_stdin=False)
         """
 
-        """
-        Execute the code from the cell and get the msg_id of the shell process.
-        This is the parent header message id for subsequent
-        """
+
+        # Execute the code from the current cell and get the msg_id of the
+        #  shell process.
         msg_id = shell.execute(self.cell.input,
                                allow_stdin=False)
 
         """
-        if self.cell_description.lower().startswith("fixture") or self.cell_description.lower().startswith("setup"):
+        if (self.cell_description.lower().startswith("fixture")
+            or self.cell_description.lower().startswith("setup")):
             self.parent.fixture_cell = self.cell
         """
 
+        # Time for the reply of the cell execution
         timeout = 2000
 
         # This list stores the output information for the entire cell
         outs = []
 
-        # Let's try to put this as in the kernel_testing: shell.get_msg outside
-        # the while loop and the iopub.get_mesg inside
+        # Wait for the execution reply (we can see this in the msg_type)
+        # This execution produces a dictionary where a status string can be
+        # obtained: 'ok' OR 'error' OR 'abort'
+        # We can also get how many cells have been executed
+        # until here, with the 'execution_count' entry
         shell.get_msg(timeout=timeout)
-        
+
         while True:
             """
             The messages from the cell contain information such
@@ -245,14 +262,16 @@ class IPyNbCell(pytest.Item):
             until we reach the end of the cell.
             """
             try:
-                # Gets one message at a time
-                msg = iopub.get_msg(timeout=5.)
-                # print '== IOPUB STUFF ==='
+                # Get one message at a time, per code block inside
+                # the cell
+                msg = iopub.get_msg(timeout=1.)
+
                 # print msg['content']
-                #print 'TYPEEEE'
-                #print msg['msg_type']
+                # print msg['msg_type']
 
                 # Breaks on the last message
+                # This is useful when no piece of code is left to be executed
+                # in acell. It doesnt work well for us
                 # if (msg.get("parent_header", None) and
                 #         msg["parent_header"].get("msg_id", None) == msg_id):
                 #     break
@@ -262,31 +281,59 @@ class IPyNbCell(pytest.Item):
                 # raise IPyNbException("Timeout of %d seconds exceeded"
                 #                      " executing cell: %s" (timeout,
                 #                                             self.cell.input))
-                # This is better:
+                # This is better: Just break the loop when the output is empty
                     break
+
             """
-            We want to compare the outputs of the messages
-            to a reference output
+            Now that we have the output from a piece of code
+            inside the cell,
+            we want to compare the outputs of the messages
+            to a reference output (the ones that are present before
+            the notebook was executed)
             """
 
-            # If the message isn't an output, we don't do anything else with it
+            # Firstly, get the msg type from the cell to know if
+            # the output comes from a code
+            # It seems that the type 'stream' is irrelevant
             msg_type = msg['msg_type']
-            
-            # print 'TYPEEE 2:'
-            # print msg_type
+
+            # REF:
+            # pyin: To let all frontends know what code is being executed at
+            # any given time, these messages contain a re-broadcast of the code
+            # portion of an execute_request, along with the execution_count.
             if msg_type in ('status', 'pyin'):
                 continue
+
+            # If there is no more output, conitnue with the executions
+            # (it will break if it is empty, with the previous statements)
+            #
+            # REF:
+            # This message type is used to clear the output that is
+            # visible on the frontend
             # elif msg_type == 'clear_output':
             #     outs = []
             #     continue
+
             # I added the msg_type 'idle' condition (when the cell stops)
-            elif (msg_type == 'clear_output' 
+            # so we get a complete cell output
+            # REF:
+            # When the kernel starts to execute code, it will enter the 'busy'
+            # state and when it finishes, it will enter the 'idle' state.
+            # The kernel will publish state 'starting' exactly
+            # once at process startup.
+            elif (msg_type == 'clear_output'
                   and msg_type['execution_state'] == 'idle'):
                 outs = []
                 continue
 
+            # WE COULD ADD HERE a condition for the 'pyerr' message type
+            # Making the cell to fail
+
+            """
+            Now we get the reply from the piece of code executed
+            and analyse the outputs
+            """
             reply = msg['content']
-            
             out = NotebookNode(output_type=msg_type)
 
             # Now check what type of output it is
@@ -294,6 +341,10 @@ class IPyNbCell(pytest.Item):
                 out.stream = reply['name']
                 out.text = reply['data']
             elif msg_type in ('display_data', 'pyout'):
+                # REF:
+                # data and metadata are identical to a display_data message.
+                # the object being displayed is that passed to the display
+                #  hook, i.e. the *result* of the execution.
                 out['metadata'] = reply['metadata']
                 for mime, data in reply['data'].iteritems():
                     attr = mime.split('/')[-1].lower()
@@ -303,7 +354,7 @@ class IPyNbCell(pytest.Item):
                     out.prompt_number = reply['execution_count']
             else:
                 print "unhandled iopub msg:", msg_type
-            
+
             # print 'OUT STATUS ========='
             # print outs
             outs.append(out)
@@ -351,7 +402,7 @@ class IPyNbCell(pytest.Item):
         # sys.stdout.write('.')
 
         # raise NotImplementedError
-        
+
         # if reply['status'] == 'error':
         # Traceback is only when an error is raised (?)
         # We usually get an exception because traceback is not defined
