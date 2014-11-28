@@ -1,0 +1,4 @@
+Install from project directory with:
+	pip install .
+
+NOTE: This may require root access.

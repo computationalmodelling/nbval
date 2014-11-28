@@ -3,15 +3,6 @@ pytest ipython plugin modification
 
 Authors: D. Cortes, O. Laslett
 
-For now, install pytest-ipynb plugin (
-https://github.com/zonca/pytest-ipynb ) :
-
-    sudo pip install pytest-ipynb
-
-And replace the file with:
-
-    sudo cp pytest_plugin.py /usr/local/lib/python2.7/dist-packages/pytest_ipynb/plugin.py
-
 """
 
 import pytest
@@ -162,6 +153,7 @@ class IPyNbFile(pytest.File):
         self.kernel.stop()
 
 
+
 class IPyNbCell(pytest.Item):
     def __init__(self, name, parent, cell_num, cell):
         super(IPyNbCell, self).__init__(name, parent)
@@ -172,13 +164,31 @@ class IPyNbCell(pytest.Item):
         #
         self.comparisons = None
 
+
+    """ *****************************************************
+        *****************  TESTING FUNCTIONS  ***************
+        ***************************************************** """
+
+    def repr_failure(self, excinfo):
+        """ called when self.runtest() raises an exception. """
+        if isinstance(excinfo.value, NbCellError):
+            return "\n".join([
+                "Notebook execution failed",
+                "Cell %d: %s\n\n"
+                "Input:\n%s\n\n"
+                "Traceback:\n%s\n" % excinfo.value.args,
+            ])
+        else:
+            return "pytest plugin exception: %s" % str(excinfo.value)
+
+    def reportinfo(self):
+        description = "cell %d" % self.cell_num
+        return self.fspath, 0, description
+
     def compare_outputs(self, test, ref, skip_compare=('png',
                                                        'traceback',
                                                        'latex',
                                                        'prompt_number')):
-        """
-
-        """
         self.comparisons = []
 
         for key in ref:
@@ -215,25 +225,9 @@ class IPyNbCell(pytest.Item):
                 return False
         return True
 
+    """ *****************************************************
+        ***************************************************** """
 
-
-    """ TESTING FUNCTIONS """
-
-    def repr_failure(self, excinfo):
-        """ called when self.runtest() raises an exception. """
-        if isinstance(excinfo.value, NbCellError):
-            return "\n".join([
-                "Notebook execution failed",
-                "Cell %d: %s\n\n"
-                "Input:\n%s\n\n"
-                "Traceback:\n%s\n" % excinfo.value.args,
-            ])
-        else:
-            return "pytest plugin exception: %s" % str(excinfo.value)
-
-    def reportinfo(self):
-        description = "cell %d" % self.cell_num
-        return self.fspath, 0, description
 
     def runtest(self):
         """
@@ -282,19 +276,13 @@ class IPyNbCell(pytest.Item):
                 # print msg['content']
                 # print msg['msg_type']
 
-                # Breaks on the last message
-                # This is useful when no piece of code is left to be executed
-                # in acell. It doesnt work well for us
-                # if (msg.get("parent_header", None) and
-                #         msg["parent_header"].get("msg_id", None) == msg_id):
-                #     break
             except Empty:
                 # This is not working: ! The code will not be checked
                 # if the time is out (when the cell stops to be executed?)
                 # raise NbCellError("Timeout of %d seconds exceeded"
                 #                      " executing cell: %s" (timeout,
                 #                                             self.cell.input))
-                # This is better: Just break the loop when the output is empty
+                # Just break the loop when the output is empty
                     break
 
             """
@@ -397,14 +385,6 @@ class IPyNbCell(pytest.Item):
         for out, ref in zip(outs, self.cell.outputs):
             if not self.compare_outputs(out, ref):
                 failed = True
-
-        # if failed:
-        #     failures += 1
-        # else:
-        #     successes += 1
-        # sys.stdout.write('.')
-
-        # raise NotImplementedError
 
         # if reply['status'] == 'error':
         # Traceback is only when an error is raised (?)
