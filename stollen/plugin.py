@@ -51,11 +51,17 @@ class NbCellError(Exception):
     """ custom exception for error reporting. """
 
 
+def pytest_addoption(parser):
+    """ Adds the --ipynb option flag for py.test. """
+    group = parser.getgroup("general")
+    group.addoption('--ipynb', action='store_true',
+                    help="Validate IPython notebooks")
+
 def pytest_collect_file(path, parent):
     """
     Collect iPython notebooks using the specified pytest hook
     """
-    if path.fnmatch("*.ipynb"):
+    if path.fnmatch("*.ipynb") and parent.config.option.ipynb:
         return IPyNbFile(path, parent)
 
 
@@ -208,6 +214,26 @@ class IPyNbCell(pytest.Item):
                 # print "\n\n"
                 return False
         return True
+
+
+
+    """ TESTING FUNCTIONS """
+
+    def repr_failure(self, excinfo):
+        """ called when self.runtest() raises an exception. """
+        if isinstance(excinfo.value, NbCellError):
+            return "\n".join([
+                "Notebook execution failed",
+                "Cell %d: %s\n\n"
+                "Input:\n%s\n\n"
+                "Traceback:\n%s\n" % excinfo.value.args,
+            ])
+        else:
+            return "pytest plugin exception: %s" % str(excinfo.value)
+
+    def reportinfo(self):
+        description = "cell %d" % self.cell_num
+        return self.fspath, 0, description
 
     def runtest(self):
         """
@@ -398,6 +424,8 @@ class IPyNbCell(pytest.Item):
                                  # Here we must put the traceback output:
                                  '\n'.join(self.comparisons))
 
+    """ SANITISE INFO """
+
     def sanitize(self, s):
         """sanitize a string for comparison.
 
@@ -440,19 +468,3 @@ class IPyNbCell(pytest.Item):
                    'U-U-I-D', s)
 
         return s
-
-    def repr_failure(self, excinfo):
-        """ called when self.runtest() raises an exception. """
-        if isinstance(excinfo.value, NbCellError):
-            return "\n".join([
-                "Notebook execution failed",
-                "Cell %d: %s\n\n"
-                "Input:\n%s\n\n"
-                "Traceback:\n%s\n" % excinfo.value.args,
-            ])
-        else:
-            return "pytest plugin exception: %s" % str(excinfo.value)
-
-    def reportinfo(self):
-        description = "cell %d" % self.cell_num
-        return self.fspath, 0, description
