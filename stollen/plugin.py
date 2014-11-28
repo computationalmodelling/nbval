@@ -47,7 +47,7 @@ class bcolors:
     ENDC = '\033[0m'
 
 
-class IPyNbException(Exception):
+class NbCellError(Exception):
     """ custom exception for error reporting. """
 
 
@@ -57,25 +57,6 @@ def pytest_collect_file(path, parent):
     """
     if path.fnmatch("*.ipynb"):
         return IPyNbFile(path, parent)
-
-
-def get_cell_description(cell_input):
-    """
-    Gets cell description
-
-    Cell description is the first line of a cell,
-    in one of this formats:
-
-    * single line docstring
-    * single line comment
-    * function definition
-    """
-    try:
-        first_line = cell_input.split("\n")[0]
-        return first_line
-    except:
-        pass
-    return "no description"
 
 
 class RunningKernel(object):
@@ -105,7 +86,7 @@ class RunningKernel(object):
         about communications taking place with one client over the shell
         channel to be made available to all clients in a uniform manner.
 
-        Check: stderr and stdout in the IPyNbException function at the end
+        Check: stderr and stdout in the NbCellError function at the end
         (if we get an error, check the msg_type and make the test to fail)
         """
         try:
@@ -180,12 +161,8 @@ class IPyNbCell(pytest.Item):
         super(IPyNbCell, self).__init__(name, parent)
 
         # Get the numbers
-        # We should get rid of the description (not giving
-        # relevant information)
         self.cell_num = cell_num
         self.cell = cell
-        self.cell_description = get_cell_description(self.cell.input)
-
         #
         self.comparisons = None
 
@@ -200,7 +177,7 @@ class IPyNbCell(pytest.Item):
 
         for key in ref:
             if key not in test:
-                print "missing key: %s != %s" % (test.keys(), ref.keys())
+                self.comparisons.append(bcolors.FAIL+"missing key: %s != %s" % (test.keys(), ref.keys())+bcolors.ENDC)
                 return False
             elif (key not in skip_compare and self.sanitize(test[key]) !=
                   self.sanitize(ref[key])):
@@ -245,22 +222,11 @@ class IPyNbCell(pytest.Item):
         # Call iopub to get the messages from the executions
         iopub = self.parent.kernel.iopub
 
-        """
-        if self.parent.fixture_cell:
-            shell.execute(self.parent.fixture_cell.input, allow_stdin=False)
-        """
-
-
         # Execute the code from the current cell and get the msg_id of the
         #  shell process.
         msg_id = shell.execute(self.cell.input,
                                allow_stdin=False)
 
-        """
-        if (self.cell_description.lower().startswith("fixture")
-            or self.cell_description.lower().startswith("setup")):
-            self.parent.fixture_cell = self.cell
-        """
 
         # Time for the reply of the cell execution
         timeout = 2000
@@ -299,7 +265,7 @@ class IPyNbCell(pytest.Item):
             except Empty:
                 # This is not working: ! The code will not be checked
                 # if the time is out (when the cell stops to be executed?)
-                # raise IPyNbException("Timeout of %d seconds exceeded"
+                # raise NbCellError("Timeout of %d seconds exceeded"
                 #                      " executing cell: %s" (timeout,
                 #                                             self.cell.input))
                 # This is better: Just break the loop when the output is empty
@@ -419,10 +385,6 @@ class IPyNbCell(pytest.Item):
 
         # We usually get an exception because traceback is not defined
         if failed:  # Use this to make the test fail
-            # raise IPyNbException(self.cell_num,
-            #                      self.cell_description,
-            #                      self.cell.input,
-            #                      '\n'.join(reply['traceback']))
             """
             The pytest exception will be raised if there are any
             errors in the notebook cells. Now we check that
@@ -430,8 +392,8 @@ class IPyNbCell(pytest.Item):
             matches the outputs in the existing notebook.
             This code is taken from [REF].
             """
-            raise IPyNbException(self.cell_num,
-                                 self.cell_description,
+            raise NbCellError(self.cell_num,
+                                 "Error with cell [CHANGE THIS]",
                                  self.cell.input,
                                  # Here we must put the traceback output:
                                  '\n'.join(self.comparisons))
@@ -481,7 +443,7 @@ class IPyNbCell(pytest.Item):
 
     def repr_failure(self, excinfo):
         """ called when self.runtest() raises an exception. """
-        if isinstance(excinfo.value, IPyNbException):
+        if isinstance(excinfo.value, NbCellError):
             return "\n".join([
                 "Notebook execution failed",
                 "Cell %d: %s\n\n"
@@ -493,6 +455,4 @@ class IPyNbCell(pytest.Item):
 
     def reportinfo(self):
         description = "cell %d" % self.cell_num
-        if self.cell_description:
-            description += ": " + self.cell_description
         return self.fspath, 0, description
