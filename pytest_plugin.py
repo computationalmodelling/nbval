@@ -52,6 +52,9 @@ class IPyNbException(Exception):
 
 
 def pytest_collect_file(path, parent):
+    """
+    Collect iPython notebooks using the specified pytest hook
+    """
     if path.fnmatch("*.ipynb"):
         return IPyNbFile(path, parent)
 
@@ -69,8 +72,7 @@ def get_cell_description(cell_input):
     """
     try:
         first_line = cell_input.split("\n")[0]
-        if first_line.startswith(('"', '#', 'def')):
-            return first_line.replace('"', '').replace("#", '').replace('def ', '').replace("_", " ").strip()
+        return first_line
     except:
         pass
     return "no description"
