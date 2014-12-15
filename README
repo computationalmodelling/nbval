@@ -1,17 +1,26 @@
 # py.test plugin for iPython notebooks
 
-This code is a modification of the plugin that extends the functionality 
+This code idea is a modification of the plugin that extends the functionality 
 of the `py.test` testing system for ipython notebooks 
 ( https://github.com/zonca/pytest-ipynb ).
+
+It is mostly based on the template:
+
+https://gist.github.com/timo/2621679 
+
+and the code of a testing system for notebooks
+
+https://gist.github.com/minrk/2620735
+
+which we integrated and mixed with the `py.test` system.
+
 
 
 ## How it works
 The extension looks through all the cells with code in an ipython notebook
 an compare the outputs of the notebook (before being processed) with the 
-outputs of the cells when they are executed (in the original script,
-the only cells that were analysed, were the ones with a `%test` string
-at the beginning, and with an assertion in the code that checks if
-a statement is true)
+outputs of the cells when they are executed. Thus, the notebook itself is
+used as a testing function.
 
 Roughly, the script initiates an iPython Kernel with a `shell` and
 an `iopub` sockets. The `shell` is needed to execute the cells in
@@ -27,43 +36,35 @@ and how the system works, can be found here
 
 http://ipython.org/ipython-doc/stable/development/messaging.html
 
-
-Our extension is based on the code of a testing system for notebooks
-
-https://gist.github.com/minrk/2620735
-
-which we integrated and mixed with the `py.test` system.
-
 ## Execution
-To execute this plugin, you need to do
+To execute this plugin, you need to execute `py.test` with the `ipynb` flag
+to differentiate the testing from the usual python files:
 
-    py.test
+    py.test --ipynb
 
-which will execute all the `.ipynb` files in the current folder, or
+This will execute all the `.ipynb` files in the current folder. Alternatively,
+it can be executed:
 
-    py.test my_notebook.ipynb
+    py.test --ipynb my_notebook.ipynb
 
 for an specific notebook.
 
 
-
 ## Installation
-Firstly, install the original plugin
+For now, the project is called `Stollen`. After cloning this repository, the
+plugin is installed doing
 
-    sudo pip install pytest-ipynb
+    sudo pip install .
 
-Then, replace the file with our modification
+from the main directory. It can be easily removed with:
 
-    sudo cp pytest_plugin.py /usr/local/lib/python2.7/dist-packages/pytest_ipynb/plugin.py
-
-
-AFTER installing the ipython test plugin (we are replacing the current test)
+    sudo pip uninstall . 
 
 ## Tests
 The `py.test` system provides the base system, for the outputs in the console.
 For example
 
-    py.test finmag_nb_test.ipynb
+    py.test --ipynb finmag_nb_test.ipynb
 
 ```
 ================================================ test session starts =================================================
