@@ -185,44 +185,53 @@ class IPyNbCell(pytest.Item):
         description = "cell %d" % self.cell_num
         return self.fspath, 0, description
 
-    def compare_outputs(self, test, ref, skip_compare=('png',
+    def compare_outputs(self, test, ref, skip_compare=('metadata',
+                                                       'png',
                                                        'traceback',
                                                        'latex',
                                                        'prompt_number')):
         self.comparisons = []
-
+        
         for key in ref:
+            # Check that the output types match
             if key not in test:
-                self.comparisons.append(bcolors.FAIL+"missing key: %s != %s" % (test.keys(), ref.keys())+bcolors.ENDC)
-                return False
-            elif (key not in skip_compare and self.sanitize(test[key]) !=
-                  self.sanitize(ref[key])):
 
                 self.comparisons.append(bcolors.FAIL
-                                        + "mismatch %s:" % key
+                                        + "missing key: %s != %s"
+                                        % (test.keys(), ref.keys())
                                         + bcolors.ENDC)
-                self.comparisons.append(test[key])
-                self.comparisons.append('  !=  ')
-                self.comparisons.append(ref[key])
-                # self.comparisons.append('==============')
-                # self.comparisons.append('The absolute test string:')
-                # self.comparisons.append(self.sanitize(test[key]))
-                # self.comparisons.append('failed to compare with the reference:')
-                # self.comparisons.append(self.sanitize(ref[key]))
-
-                # print bcolors.FAIL + "mismatch %s:" % key + bcolors.ENDC
-                # print test[key]
-                # print '  !=  '
-                # print ref[key]
-                # print bcolors.OKBLUE + 'DEBUGGING INFO' + bcolors.ENDC
-                # print '=============='
-                # print 'The absolute test string:'
-                # print sanitize(test[key])
-                # print 'failed to compare with the reference:'
-                # print sanitize(ref[key])
-                # print '---------------------------------------'
-                # print "\n\n"
                 return False
+            # Check that the output types are not in the skip_compare list,
+            # sanitise the output line and compare them
+            elif key not in skip_compare:
+                if (self.sanitize(test[key]) !=
+                        self.sanitize(ref[key])):
+
+                    self.comparisons.append(bcolors.FAIL
+                                            + "mismatch %s:" % key
+                                            + bcolors.ENDC)
+                    self.comparisons.append(test[key])
+                    self.comparisons.append('  !=  ')
+                    self.comparisons.append(ref[key])
+                    # self.comparisons.append('==============')
+                    # self.comparisons.append('The absolute test string:')
+                    # self.comparisons.append(self.sanitize(test[key]))
+                    # self.comparisons.append('failed to compare with the reference:')
+                    # self.comparisons.append(self.sanitize(ref[key]))
+
+                    # print bcolors.FAIL + "mismatch %s:" % key + bcolors.ENDC
+                    # print test[key]
+                    # print '  !=  '
+                    # print ref[key]
+                    # print bcolors.OKBLUE + 'DEBUGGING INFO' + bcolors.ENDC
+                    # print '=============='
+                    # print 'The absolute test string:'
+                    # print sanitize(test[key])
+                    # print 'failed to compare with the reference:'
+                    # print sanitize(ref[key])
+                    # print '---------------------------------------'
+                    # print "\n\n"
+                    return False
         return True
 
     """ *****************************************************
@@ -382,9 +391,19 @@ class IPyNbCell(pytest.Item):
         # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         failed = False
-        for out, ref in zip(outs, self.cell.outputs):
-            if not self.compare_outputs(out, ref):
-                failed = True
+
+        if len(outs) != len(self.cell.outputs):
+            self.comparisons = []
+            self.comparisons.append(bcolors.FAIL
+                                    + 'Mismatch number of outputs'
+                                    + ' in cell'
+                                    + bcolors.ENDC)
+
+            failed = True
+        else:
+            for out, ref in zip(outs, self.cell.outputs):
+                if not self.compare_outputs(out, ref):
+                    failed = True
 
         # if reply['status'] == 'error':
         # Traceback is only when an error is raised (?)
@@ -399,10 +418,10 @@ class IPyNbCell(pytest.Item):
             This code is taken from [REF].
             """
             raise NbCellError(self.cell_num,
-                                 "Error with cell [CHANGE THIS]",
-                                 self.cell.input,
-                                 # Here we must put the traceback output:
-                                 '\n'.join(self.comparisons))
+                              "Error with cell [CHANGE THIS]",
+                              self.cell.input,
+                              # Here we must put the traceback output:
+                              '\n'.join(self.comparisons))
 
     """ SANITISE INFO """
 
