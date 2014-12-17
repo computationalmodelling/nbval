@@ -8,8 +8,12 @@ Authors: D. Cortes, O. Laslett
 import pytest
 import os
 import sys
+
 # For regular expressions:
 import re
+# For using a external file with the regex expressions
+# to sanitise the outputs
+import ConfigParser
 
 try:
     from exceptions import Exception
@@ -43,10 +47,32 @@ class NbCellError(Exception):
 
 
 def pytest_addoption(parser):
-    """ Adds the --ipynb option flag for py.test. """
+    """
+    Adds the --ipynb option flag for py.test.
+
+    Adds an optional flag to pass a config file with regex
+    expressions to sanitise the outputs
+    Only will work if the --ipynb flag is present
+    """
     group = parser.getgroup("general")
     group.addoption('--ipynb', action='store_true',
                     help="Validate IPython notebooks")
+
+    group.addoption('--sanitize_file',
+                    help='File with regex expressions to sanitize '
+                         'the outputs. This option only works when '
+                         'the --ipynb flag is passed to py.test')
+
+
+# def pytest_configure(config):
+#     """ called after command line options have been parsed
+#         and all plugins and initial conftest files been loaded.
+#     """
+#     if config.option.sanitise_file:
+#         if not config.option.ipynb:
+#             raise NameError('ERROR: Config file without --ipynb flag')
+#         else:
+            
 
 def pytest_collect_file(path, parent):
     """
@@ -144,14 +170,26 @@ class IPyNbFile(pytest.File):
                     # Update 'code' cell count
                     cell_num += 1
 
-    # Start the kernel with this function
+    # Start the iPython kernel and the sanitize instance, using the
+    # ConfigParser library, if the option was selected in the input
+    # These are parent options of the IPyNbCell class
+    # The self.Config is used in the sanitize function of the
+    # IPyNbCell class
     def setup(self):
         self.fixture_cell = None
         self.kernel = RunningKernel()
 
+        try:
+            self.sanitize_file = self.parent.config.option.sanitize_file
+            self.Config = ConfigParser.ConfigParser()
+            # When reading the file, the sections are registered.
+            # Currently, the section names are not meaningful
+            self.Config.read(self.sanitize_file)
+        except:
+            self.sanitize_file = None
+
     def teardown(self):
         self.kernel.stop()
-
 
 
 class IPyNbCell(pytest.Item):
@@ -163,7 +201,6 @@ class IPyNbCell(pytest.Item):
         self.cell = cell
         #
         self.comparisons = None
-
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
@@ -237,7 +274,6 @@ class IPyNbCell(pytest.Item):
     """ *****************************************************
         ***************************************************** """
 
-
     def runtest(self):
         """
         Run all the cell tests in one kernel without restarting.
@@ -255,7 +291,6 @@ class IPyNbCell(pytest.Item):
         #  shell process.
         msg_id = shell.execute(self.cell.input,
                                allow_stdin=False)
-
 
         # Time for the reply of the cell execution
         timeout = 2000
@@ -392,6 +427,8 @@ class IPyNbCell(pytest.Item):
 
         failed = False
 
+        # Compare if the outputs have the same number of lines
+        # and throw an error if it fails
         if len(outs) != len(self.cell.outputs):
             self.comparisons = []
             self.comparisons.append(bcolors.FAIL
@@ -400,6 +437,7 @@ class IPyNbCell(pytest.Item):
                                     + bcolors.ENDC)
 
             failed = True
+        # If the outputs are the same, compare them line by line
         else:
             for out, ref in zip(outs, self.cell.outputs):
                 if not self.compare_outputs(out, ref):
@@ -423,8 +461,6 @@ class IPyNbCell(pytest.Item):
                               # Here we must put the traceback output:
                               '\n'.join(self.comparisons))
 
-    """ SANITISE INFO """
-
     def sanitize(self, s):
         """sanitize a string for comparison.
 
@@ -439,31 +475,40 @@ class IPyNbCell(pytest.Item):
         is used to find finmag stamps (Time and date followed by INFO,
         DEBUG, WARNING) and the whole line is replaced with a single
         word.
-        """
-        s = re.sub(r'\[.*\] INFO:.*', 'FINMAG INFO:', s)
-        s = re.sub(r'\[.*\] DEBUG:.*', 'FINMAG DEBUG:', s)
-        s = re.sub(r'\[.*\] WARNING:.*', 'FINMAG WARNING:', s)
 
+        The regex replacements are taken from a file if the option
+        is passed when py.test is called. Otherwise, the strings
+        are not processed
         """
-        Using the same method we strip UserWarnings from matplotlib
-        """
-        s = re.sub(r'.*/matplotlib/.*UserWarning:.*',
-                   'MATPLOTLIB USERWARNING', s)
+        if self.parent.sanitize_file:
+            for sec_name in self.parent.Config.sections():
+                s = re.sub(self.parent.Config.get(sec_name, 'regex'),
+                           self.parent.Config.get(sec_name, 'replace'),
+                           s)
 
-        # Also for gmsh information lines
-        s = re.sub(r'Info    :.*', 'GMSH INFO', s)
+        # s = re.sub(r'\[.*\] INFO:.*', 'FINMAG INFO:', s)
+        # s = re.sub(r'\[.*\] DEBUG:.*', 'FINMAG DEBUG:', s)
+        # s = re.sub(r'\[.*\] WARNING:.*', 'FINMAG WARNING:', s)
+        # # normalize hex addresses:
+        # s = re.sub(r'0x[a-f0-9]+', '0xFFFFFFFF', s)
+
+        # # normalize UUIDs:
+        # s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}',
+        #            'U-U-I-D', s)
+
+        # """
+        # Using the same method we strip UserWarnings from matplotlib
+        # """
+        # s = re.sub(r'.*/matplotlib/.*UserWarning:.*',
+        #            'MATPLOTLIB USERWARNING', s)
+
+        # # Also for gmsh information lines
+        # s = re.sub(r'Info    :.*', 'GMSH INFO', s)
 
         # normalize newline:
         s = s.replace('\r\n', '\n')
 
         # ignore trailing newlines (but not space)
         s = s.rstrip('\n')
-
-        # normalize hex addresses:
-        s = re.sub(r'0x[a-f0-9]+', '0xFFFFFFFF', s)
-
-        # normalize UUIDs:
-        s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}',
-                   'U-U-I-D', s)
 
         return s

@@ -1,0 +1,27 @@
+[regex1]
+regex: \[.*\] INFO:.*
+replace: FINMAG INFO:
+
+[regex2]
+regex: \[.*\] DEBUG:.*
+replace: FINMAG DEBUG:
+
+[regex3]
+regex: \[.*\] WARNING:.*
+replace: FINMAG WARNING:
+
+[regex4]
+regex: .*/matplotlib/.*UserWarning:.*
+replace: MATPLOTLIB USERWARNING
+
+[regex5]
+regex: Info    :.*
+replace: GMSH INFO
+
+[regex6]
+regex: 0x[a-f0-9]+
+replace: 0xFFFFFFFF
+
+[regex7]
+regex: [a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}
+replace: U-U-I-D
