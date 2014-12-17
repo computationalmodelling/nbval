@@ -456,7 +456,9 @@ class IPyNbCell(pytest.Item):
             This code is taken from [REF].
             """
             raise NbCellError(self.cell_num,
-                              "Error with cell [CHANGE THIS]",
+                              # Still needs correction. We could
+                              # add a description
+                              "Error with cell",
                               self.cell.input,
                               # Here we must put the traceback output:
                               '\n'.join(self.comparisons))

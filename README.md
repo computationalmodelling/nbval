@@ -94,45 +94,78 @@ For example
 will produce
 
 ```
-================================================ test session starts =================================================
-platform linux2 -- Python 2.7.6 -- py-1.4.26 -- pytest-2.6.4
-plugins: ipynb
-collected 7 items 
 
-finmag_nb_test.ipynb .....F.
+=================================== test session starts ====================================
+platform linux2 -- Python 2.7.6 -- py-1.4.20 -- pytest-2.5.2
+plugins: stollen
+collected 8 items 
 
-====================================================== FAILURES ======================================================
-_______________________________________________ cell 7: no description _______________________________________________
+finmag_nb_test.ipynb .FF..FF.
+
+========================================= FAILURES =========================================
+__________________________________________ cell 2 __________________________________________
 Notebook execution failed
-Cell 7: no description
+Cell 2: Error with cell
 
 Input:
-[np.random.rand() for i in range(10)]
+sim = finmag.example.barmini()
+
+Traceback:
+Mismatch number of outputs in cell
+
+__________________________________________ cell 3 __________________________________________
+Notebook execution failed
+Cell 3: Error with cell
+
+Input:
+sim.run_until(1e-10)
+
+Traceback:
+Mismatch number of outputs in cell
+
+__________________________________________ cell 7 __________________________________________
+Notebook execution failed
+Cell 7: Error with cell
+
+Input:
+print [np.random.rand() for i in range(4)]
+print [np.random.rand() for i in range(4)]
 
 Traceback:
 mismatch text:
-[0.23679291372468003,
- 0.27501942679370517,
- 0.6817146281770614,
- 0.3082628193357294,
- 0.647192050842091,
- 0.6360479616745076,
- 0.7507917597788405,
- 0.7458041582949282,
- 0.5964258144316087,
- 0.9037044914313878]
-  !=  
-[0.9696300594926726,
- 0.7287187988469214,
- 0.9053184809954344,
- 0.05173052644868459,
- 0.9053938024346945,
- 0.9316999257826623,
- 0.38838202922057374,
- 0.00300095736645567,
- 0.057452995448194266,
- 0.7619880389423896]
+[0.8138240863751218, 0.5542320678041717, 0.4118839647182173, 0.43531249806206707]
+[0.9825349878065949, 0.6601684143399118, 0.6098945000301015, 0.010376910854703048]
 
+  !=  
+[0.8827183866873831, 0.6374475831607065, 0.9714307435688422, 0.5429659593925313]
+[0.4135221535721476, 0.5592454549210213, 0.7262998989524039, 0.5689598602201745]
+
+
+__________________________________________ cell 8 __________________________________________
+Notebook execution failed
+Cell 8: Error with cell
+
+Input:
+# This is meant to fail when the number of lines
+# mismatch
+for i in range(np.random.randint(1, 8)):
+    print 1
+
+Traceback:
+mismatch text:
+1
+1
+
+  !=  
+1
+1
+1
+1
+1
+1
+
+
+=========================== 4 failed, 4 passed in 14.94 seconds ============================
 ```
 
 Currently, image files are not compared, but from the original script,
