@@ -1,20 +1,12 @@
-# py.test plugin for iPython notebooks
+## py.test plugin for iPython notebooks
 
 This code idea is a modification of the plugin that extends the functionality 
 of the `py.test` testing system for ipython notebooks 
 ( https://github.com/zonca/pytest-ipynb ).
 
-It is mostly based on the template:
-
-https://gist.github.com/timo/2621679 
-
-and the code of a testing system for notebooks
-
-https://gist.github.com/minrk/2620735
-
+It is mostly based on the template in https://gist.github.com/timo/2621679 
+and the code of a testing system for notebooks https://gist.github.com/minrk/2620735
 which we integrated and mixed with the `py.test` system.
-
-
 
 ## How it works
 The extension looks through all the cells with code in an ipython notebook
