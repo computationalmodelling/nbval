@@ -1,4 +1,4 @@
-## py.test plugin for iPython notebooks
+# Py.test plugin for iPython notebooks
 
 This code idea is a modification of the plugin that extends the functionality 
 of the `py.test` testing system for ipython notebooks 
