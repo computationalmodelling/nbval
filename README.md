@@ -143,3 +143,8 @@ Furthermore, when the number of output lines from the executed outputs
 differ from the total of lines from the reference, the traceback
 will show a `Mismatch number of outputs in cell` message.
 
+## Help
+The `py.test` system help can be obtained with `py.test -h`, which will
+show all the flags that can be passed to the command, such as the
+verbose `-v` option. The ipython notebook plugin can be found under the
+`general` section.
