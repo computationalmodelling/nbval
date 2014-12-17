@@ -8,15 +8,24 @@ It is mostly based on the template in https://gist.github.com/timo/2621679
 and the code of a testing system for notebooks https://gist.github.com/minrk/2620735
 which we integrated and mixed with the `py.test` system.
 
+Additionally, we added an option to create a configuration file with
+`regex`s which are used to sanitize strings in the outputs of the
+iPython reference notebook, when executed. 
+
 ## How it works
-The extension looks through all the cells with code in an ipython notebook
-an compare the outputs of the notebook (before being processed) with the 
+The extension looks through every cell that contains code in an ipython notebook
+an then the `py.test` system compares the outputs of the notebook
+(before being processed) with the 
 outputs of the cells when they are executed. Thus, the notebook itself is
 used as a testing function.
+The output lines when executing the notebook can be sanitized passing an
+extra option and file, when calling the `py.test` command. This file
+is a usual configuration file for the `ConfigParser` library.
 
-Roughly, the script initiates an iPython Kernel with a `shell` and
+Regarding the execution, roughly, the script initiates an
+iPython Kernel with a `shell` and
 an `iopub` sockets. The `shell` is needed to execute the cells in
-the notebook (send requests to the Kernel) and the `iopub` provides 
+the notebook (it sends requests to the Kernel) and the `iopub` provides 
 an interface to get the messages from the outputs. The contents
 of the messages obtained from the Kernel are organised in dictionaries
 with different information, such as time stamps of executions,
@@ -39,24 +48,50 @@ it can be executed:
 
     py.test --ipynb my_notebook.ipynb
 
-for an specific notebook.
+for an specific notebook. 
+If the output lines are going to be sanitized, an extra flag, `--sanitize_file`
+together with the path to a confguration file with regex expressions, must be passed,
+i.e.
 
+    py.test --ipynb my_notebook.ipynb --sanitize_file path/to/my_sanitize_file
+
+where `my_sanitize_file` has the structure
+
+```
+[regex1]
+regex: [a-z]* 
+replace: abcd
+
+[regex2]
+regex: [1-9]*
+replace: 0000
+```
+
+The `regex` option contains the expression that is going to be matched in the outputs, and
+`replace` is the string that will replace the `regex` match. Currently, the section
+names do not have any meaning or influence in the testing system, it will take
+all the sections and replace the corresponding options.
+
+Examples of a notebook and regex file are found in the `finmag_nb_test.ipynb`
+and `regex_sanitize` files, correspondingly.
 
 ## Installation
-For now, the project is called `Stollen`. After cloning this repository, the
+For now, the project is called `stollen`. After cloning this repository, the
 plugin is installed doing
 
     sudo pip install .
 
 from the main directory. It can be easily removed with:
 
-    sudo pip uninstall . 
+    sudo pip uninstall stollen
 
 ## Tests
 The `py.test` system provides the base system, for the outputs in the console.
 For example
 
-    py.test --ipynb finmag_nb_test.ipynb
+    py.test --ipynb finmag_nb_test.ipynb --sanitize_file regex_sanitize
+
+will produce
 
 ```
 ================================================ test session starts =================================================
@@ -104,15 +139,7 @@ Currently, image files are not compared, but from the original script,
 it can be implemented a function to take this into account
 in the future.
 
-## Sanitise
-In the script there is a `sanitise` function that gets rid of strings
-that are likely to fail, due to the execution dependent outputs
-(such as timestamps, library versions, etc.) that some of the
-code blocks produce. This function can be modified and extended to
-suit the needs of iPython notebooks that use a specific Python library.
-
-In the future, we can export this function to an external file with a
-series of `regex` expressions or strings that need to be sanitised
-in the notebook outputs.
-
+Furthermore, when the number of output lines from the executed outputs
+differ from the total of lines from the reference, the traceback
+will show a `Mismatch number of outputs in cell` message.
 
