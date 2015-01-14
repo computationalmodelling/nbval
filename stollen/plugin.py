@@ -398,7 +398,7 @@ class IPyNbCell(pytest.Item):
                 if msg_type == 'pyout':
                     out.prompt_number = reply['execution_count']
             else:
-                print "unhandled iopub msg:", msg_type
+                print("unhandled iopub msg:", msg_type)
 
             # print 'OUT STATUS ========='
             # print outs
