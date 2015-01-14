@@ -1,0 +1,7 @@
+[regex1]
+regex: \d{1,2}/\d{1,2}/\d{2,4}
+replace: DATE-STAMP
+
+[regex2]
+regex: \d{2}:\d{2}:\d{2}
+replace: TIME-STAMP
