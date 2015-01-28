@@ -153,19 +153,12 @@ class IPyNbFile(pytest.File):
             for ws in self.nb.worksheets:
                 for cell in ws.cells:
                     # Skip the cells that have text, headings or related stuff
+                    # Only test code cells
                     if cell.cell_type == 'code':
+                        # If the code is a notebook magic cell, do not run
+                        # i.e. cell code starts with '%%'
+                        if not '%%' == cell.input[0][:2]:
                             yield IPyNbCell(self.name, self, cell_num, cell)
-
-                    # Otherwise the cell is an output cell, run it!
-                    # try:
-                        # This is from the prsenb code:
-                        # we must change it according to this script, where
-                        # the cell inspection is made by IPyNbCell
-                        # outs = run_cell(shell, iopub, cell, t, tshell)
-                        # yield?
-                    # except Exception as e:
-                    #     print "failed to run cell:", repr(e)
-                    #     print cell.input
 
                     # Update 'code' cell count
                     cell_num += 1
@@ -199,6 +192,7 @@ class IPyNbCell(pytest.Item):
         # Get the numbers
         self.cell_num = cell_num
         self.cell = cell
+
         #
         self.comparisons = None
 
@@ -256,18 +250,6 @@ class IPyNbCell(pytest.Item):
                     # self.comparisons.append('failed to compare with the reference:')
                     # self.comparisons.append(self.sanitize(ref[key]))
 
-                    # print bcolors.FAIL + "mismatch %s:" % key + bcolors.ENDC
-                    # print test[key]
-                    # print '  !=  '
-                    # print ref[key]
-                    # print bcolors.OKBLUE + 'DEBUGGING INFO' + bcolors.ENDC
-                    # print '=============='
-                    # print 'The absolute test string:'
-                    # print sanitize(test[key])
-                    # print 'failed to compare with the reference:'
-                    # print sanitize(ref[key])
-                    # print '---------------------------------------'
-                    # print "\n\n"
                     return False
         return True
 
@@ -316,9 +298,6 @@ class IPyNbCell(pytest.Item):
                 # Get one message at a time, per code block inside
                 # the cell
                 msg = iopub.get_msg(timeout=1.)
-
-                # print msg['content']
-                # print msg['msg_type']
 
             except Empty:
                 # This is not working: ! The code will not be checked
@@ -400,8 +379,6 @@ class IPyNbCell(pytest.Item):
             else:
                 print("unhandled iopub msg:", msg_type)
 
-            # print 'OUT STATUS ========='
-            # print outs
             outs.append(out)
 
         """
@@ -410,20 +387,6 @@ class IPyNbCell(pytest.Item):
         was an error.
         """
         reply = msg['content']
-
-        # DEBUG::::::::::::::::::::::::::::::::::::::::::::::::::
-        # We need to get the reference from the outputs that are already
-        # in the notebook
-        # print '============= REFERENCE ??? ======== \n'
-        # print self.cell.outputs
-        # print '\n\n'
-
-        # We need to get the reference from the outputs that are already
-        # in the notebook
-        # print '============= OUTPUT ??? ======== \n'
-        # print outs
-        # print '\n\n'
-        # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         failed = False
 
@@ -487,25 +450,6 @@ class IPyNbCell(pytest.Item):
                 s = re.sub(self.parent.Config.get(sec_name, 'regex'),
                            self.parent.Config.get(sec_name, 'replace'),
                            s)
-
-        # s = re.sub(r'\[.*\] INFO:.*', 'FINMAG INFO:', s)
-        # s = re.sub(r'\[.*\] DEBUG:.*', 'FINMAG DEBUG:', s)
-        # s = re.sub(r'\[.*\] WARNING:.*', 'FINMAG WARNING:', s)
-        # # normalize hex addresses:
-        # s = re.sub(r'0x[a-f0-9]+', '0xFFFFFFFF', s)
-
-        # # normalize UUIDs:
-        # s = re.sub(r'[a-f0-9]{8}(\-[a-f0-9]{4}){3}\-[a-f0-9]{12}',
-        #            'U-U-I-D', s)
-
-        # """
-        # Using the same method we strip UserWarnings from matplotlib
-        # """
-        # s = re.sub(r'.*/matplotlib/.*UserWarning:.*',
-        #            'MATPLOTLIB USERWARNING', s)
-
-        # # Also for gmsh information lines
-        # s = re.sub(r'Info    :.*', 'GMSH INFO', s)
 
         # normalize newline:
         s = s.replace('\r\n', '\n')
