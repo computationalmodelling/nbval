@@ -1,8 +1,16 @@
 # Py.test plugin for iPython notebook validation
 
-Additionally, we added an option to create a configuration file with
-`regex`s which are used to sanitize strings in the outputs of the
-iPython reference notebook, when executed. 
+The plugin adds functionality to py.test to recognise and collect ipython
+notebooks. The intended purpose of the tests is to determine whether execution
+of the stored inputs match the stored outputs of the `.ipynb` file.
+
+The tests were designed to ensure that ipython notebooks (especially those for
+reference and documentation), are executing consistently.
+
+Each cell is taken as a test, a cell that doesn't reproduce the expected
+output will fail.
+
+See `documentation.ipynb` for the full documentation.
 
 ## How it works
 The extension looks through every cell that contains code in an ipython notebook
