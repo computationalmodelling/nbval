@@ -1,12 +1,4 @@
-# Py.test plugin for iPython notebooks
-
-This code idea is a modification of the plugin that extends the functionality 
-of the `py.test` testing system for ipython notebooks 
-( https://github.com/zonca/pytest-ipynb ).
-
-It is mostly based on the template in https://gist.github.com/timo/2621679 
-and the code of a testing system for notebooks https://gist.github.com/minrk/2620735
-which we integrated and mixed with the `py.test` system.
+# Py.test plugin for iPython notebook validation
 
 Additionally, we added an option to create a configuration file with
 `regex`s which are used to sanitize strings in the outputs of the
@@ -181,3 +173,13 @@ The `py.test` system help can be obtained with `py.test -h`, which will
 show all the flags that can be passed to the command, such as the
 verbose `-v` option. The ipython notebook plugin can be found under the
 `general` section.
+
+
+## Ackowledgements
+This plugin was inspired by Andrea Zonca's py.test plugin for collecting unit
+tests in the ipython notebooks ( https://github.com/zonca/pytest-ipynb ).
+
+
+It is mostly based on the template in https://gist.github.com/timo/2621679 
+and the code of a testing system for notebooks https://gist.github.com/minrk/2620735
+which we integrated and mixed with the `py.test` system.
