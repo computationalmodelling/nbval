@@ -1,4 +1,4 @@
-![2000px-University_of_Southampton_Logo.svg.png](https://bitbucket.org/repo/poLqzg/images/1829674036-2000px-University_of_Southampton_Logo.svg.png)
+![2000px-University_of_Southampton_Logo.svg.png](https://bitbucket.org/repo/poLqzg/images/2632603692-2000px-University_of_Southampton_Logo.svg.png)
 
 # Py.test plugin for iPython notebook validation
 
