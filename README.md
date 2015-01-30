@@ -12,6 +12,17 @@ output will fail.
 
 See `documentation.ipynb` for the full documentation.
 
+## Installation
+For now, the project is called `stollen`. After cloning this repository, the
+plugin is installed doing
+
+    sudo pip install .
+
+from the main directory. It can be easily removed with:
+
+    sudo pip uninstall stollen
+
+
 ## How it works
 The extension looks through every cell that contains code in an ipython notebook
 an then the `py.test` system compares the outputs of the notebook
@@ -74,107 +85,6 @@ all the sections and replace the corresponding options.
 
 Examples of a notebook and regex file are found in the `finmag_nb_test.ipynb`
 and `regex_sanitize` files, correspondingly.
-
-## Installation
-For now, the project is called `stollen`. After cloning this repository, the
-plugin is installed doing
-
-    sudo pip install .
-
-from the main directory. It can be easily removed with:
-
-    sudo pip uninstall stollen
-
-## Tests
-The `py.test` system provides the base system, for the outputs in the console.
-For example
-
-    py.test --ipynb finmag_nb_test.ipynb --sanitize_file regex_sanitize
-
-will produce
-
-```
-
-=================================== test session starts ====================================
-platform linux2 -- Python 2.7.6 -- py-1.4.20 -- pytest-2.5.2
-plugins: stollen
-collected 8 items 
-
-finmag_nb_test.ipynb .FF..FF.
-
-========================================= FAILURES =========================================
-__________________________________________ cell 2 __________________________________________
-Notebook execution failed
-Cell 2: Error with cell
-
-Input:
-sim = finmag.example.barmini()
-
-Traceback:
-Mismatch number of outputs in cell
-
-__________________________________________ cell 3 __________________________________________
-Notebook execution failed
-Cell 3: Error with cell
-
-Input:
-sim.run_until(1e-10)
-
-Traceback:
-Mismatch number of outputs in cell
-
-__________________________________________ cell 7 __________________________________________
-Notebook execution failed
-Cell 7: Error with cell
-
-Input:
-print [np.random.rand() for i in range(4)]
-print [np.random.rand() for i in range(4)]
-
-Traceback:
-mismatch text:
-[0.8138240863751218, 0.5542320678041717, 0.4118839647182173, 0.43531249806206707]
-[0.9825349878065949, 0.6601684143399118, 0.6098945000301015, 0.010376910854703048]
-
-  !=  
-[0.8827183866873831, 0.6374475831607065, 0.9714307435688422, 0.5429659593925313]
-[0.4135221535721476, 0.5592454549210213, 0.7262998989524039, 0.5689598602201745]
-
-
-__________________________________________ cell 8 __________________________________________
-Notebook execution failed
-Cell 8: Error with cell
-
-Input:
-# This is meant to fail when the number of lines
-# mismatch
-for i in range(np.random.randint(1, 8)):
-    print 1
-
-Traceback:
-mismatch text:
-1
-1
-
-  !=  
-1
-1
-1
-1
-1
-1
-
-
-=========================== 4 failed, 4 passed in 14.94 seconds ============================
-```
-
-Currently, image files are not compared, but from the original script,
-it can be implemented a function to take this into account
-in the future.
-
-Furthermore, when the number of output lines from the executed outputs
-differ from the total of lines from the reference, the traceback
-will show a `Mismatch number of outputs in cell` message.
 
 ## Help
 The `py.test` system help can be obtained with `py.test -h`, which will
