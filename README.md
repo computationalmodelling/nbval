@@ -13,14 +13,13 @@ output will fail.
 See `documentation.ipynb` for the full documentation.
 
 ## Installation
-For now, the project is called `stollen`. After cloning this repository, the
-plugin is installed doing
+After cloning this repository, the plugin is installed doing
 
     sudo pip install .
 
 from the main directory. It can be easily removed with:
 
-    sudo pip uninstall stollen
+    sudo pip uninstall pytest_validate_nb
 
 
 ## How it works
