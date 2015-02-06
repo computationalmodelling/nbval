@@ -157,9 +157,13 @@ class IPyNbFile(pytest.File):
                     if cell.cell_type == 'code':
                         # If the code is a notebook magic cell, do not run
                         # i.e. cell code starts with '%%'
-                        if ( (len(cell.input[0]) < 2) or (not '%%' == cell.input[0][:2]) ):
+                        if not ( cell.input.startswith('%%') 
+                             or cell.input.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') ):
+
                             yield IPyNbCell(self.name, self, cell_num, cell)
-                            
+                        else:
+                            # The cell with '%%' will not be counted
+                            continue
 
                     # Update 'code' cell count
                     cell_num += 1
