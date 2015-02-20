@@ -102,3 +102,9 @@ tests in the ipython notebooks ( https://github.com/zonca/pytest-ipynb ).
 It is mostly based on the template in https://gist.github.com/timo/2621679 
 and the code of a testing system for notebooks https://gist.github.com/minrk/2620735
 which we integrated and mixed with the `py.test` system.
+
+## Authors
+
+David Cortes-Ortuno, Oliver Laslett, Maximilian Albert, Ondrej Hovorka, Hans Fangohr
+
+University of Southampton, 2014 - 2015, http://www.southampton.ac.uk
