@@ -214,11 +214,11 @@ class IPyNbCell(pytest.Item):
             msg_items = [bcolors.FAIL + "Notebook cell execution failed" + bcolors.ENDC]
             formatstring = bcolors.OKBLUE + "Cell %d: %s\n\n" + \
                     "Input:\n" + bcolors.ENDC + "%s\n\n" + \
-                    bcolors.OKBLUE + "Traceback:\n%s\n" + bcolors.ENDC
+                    bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC
             msg_items.append(formatstring % excinfo.value.args)
 #                bcolors.OKBLUE + "Cell %d: %s\n\n" +
 #                "Input:" + bcolors.ENDC + "\n%s\n\n" +
-#                bcolors.OKBLUE + "Traceback:\n%s\n"  % excinfo.value.args
+#                bcolors.OKBLUE + "Traceback:%s"  % excinfo.value.args
             return "\n".join(msg_items)
         else:
             return "pytest plugin exception: %s" % str(excinfo.value)
@@ -250,17 +250,17 @@ class IPyNbCell(pytest.Item):
                         self.sanitize(ref[key])):
 
                     self.comparisons.append(bcolors.OKBLUE
-                                            + "mismatch '%s'\n" % key
+                                            + " mismatch '%s'\n" % key
                                             + bcolors.FAIL
-                                            + "<<<<<<<<<<<. Newly computed output:"
+                                            + "<<<<<<<<<<<< Newly computed output:"
                                             + bcolors.ENDC)
                     self.comparisons.append(test[key])
                     self.comparisons.append(bcolors.FAIL
-                                            +'============ disagrees with reference output from ipynb file:  '
+                                            + '============ disagrees with reference output from ipynb file:  '
                                             + bcolors.ENDC)
                     self.comparisons.append(ref[key])
                     self.comparisons.append(bcolors.FAIL
-                                            +'>>>>>>>>>>>>'
+                                            + '>>>>>>>>>>>>'
                                             + bcolors.ENDC)
 
                     # self.comparisons.append('==============')
