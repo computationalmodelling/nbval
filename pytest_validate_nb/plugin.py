@@ -270,6 +270,48 @@ class IPyNbCell(pytest.Item):
                     return False
         return True
 
+    def diff_number_outputs(self, test, ref, skip_compare=('metadata',
+                                                           'png',
+                                                           'traceback',
+                                                           'latex',
+                                                           'prompt_number',
+                                                           'stdout',
+                                                           'stream',
+                                                           'output_type'
+                                                           )):
+        """
+        When the number of outputs from test and ref are different,
+        we print the full output of the difference
+
+        Since we are not comparing mismatch entries, we have to manually
+        discard the stdout, stream and output_type keys
+        """
+
+        self.comparisons = []
+        self.comparisons.append(bcolors.FAIL
+                                + 'Mismatch number of outputs'
+                                + ' in cell'
+                                + bcolors.ENDC)
+
+        # ref and test are lists with elements of the type:
+        #
+        # {'output_type': 'stream', 'stream': 'stdout',
+        #  'text': "The time is: 11:44:21\nToday's date is: 13/03/15\n"}
+        #
+        # We look into every element and discard the undesired entries
+        # Every line is appended to the output list
+        for reference in ref:
+            for key in reference.keys():
+                if key not in skip_compare:
+                    self.comparisons.append(self.sanitize(reference[key]))
+
+        self.comparisons.append('  !=  ')
+
+        for testing in test:
+            for key in testing.keys():
+                if key not in skip_compare:
+                    self.comparisons.append(self.sanitize(testing[key]))
+
     """ *****************************************************
         ***************************************************** """
 
@@ -410,13 +452,9 @@ class IPyNbCell(pytest.Item):
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
         if len(outs) != len(self.cell.outputs):
-            self.comparisons = []
-            self.comparisons.append(bcolors.FAIL
-                                    + 'Mismatch number of outputs'
-                                    + ' in cell'
-                                    + bcolors.ENDC)
-
+            self.diff_number_outputs(outs, self.cell.outputs)
             failed = True
+
         # If the outputs are the same, compare them line by line
         else:
             for out, ref in zip(outs, self.cell.outputs):
