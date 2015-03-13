@@ -216,9 +216,6 @@ class IPyNbCell(pytest.Item):
                     "Input:\n" + bcolors.ENDC + "%s\n\n" + \
                     bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC
             msg_items.append(formatstring % excinfo.value.args)
-#                bcolors.OKBLUE + "Cell %d: %s\n\n" +
-#                "Input:" + bcolors.ENDC + "\n%s\n\n" +
-#                bcolors.OKBLUE + "Traceback:%s"  % excinfo.value.args
             return "\n".join(msg_items)
         else:
             return "pytest plugin exception: %s" % str(excinfo.value)
