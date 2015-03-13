@@ -72,7 +72,7 @@ def pytest_addoption(parser):
 #         if not config.option.ipynb:
 #             raise NameError('ERROR: Config file without --ipynb flag')
 #         else:
-            
+
 
 def pytest_collect_file(path, parent):
     """
@@ -159,7 +159,7 @@ class IPyNbFile(pytest.File):
                         # i.e. cell code starts with '%%'
                         # Also ignore the cells that start with the
                         # comment string PYTEST_VALIDATE_IGNORE_OUTPUT
-                        if not (cell.input.startswith('%%') or 
+                        if not (cell.input.startswith('%%') or
                                 cell.input.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT')):
 
                             yield IPyNbCell(self.name, self, cell_num, cell)
@@ -230,7 +230,7 @@ class IPyNbCell(pytest.Item):
                                                        'latex',
                                                        'prompt_number')):
         self.comparisons = []
-        
+
         for key in ref:
             # Check that the output types match
             if key not in test:
@@ -247,11 +247,18 @@ class IPyNbCell(pytest.Item):
                         self.sanitize(ref[key])):
 
                     self.comparisons.append(bcolors.FAIL
-                                            + "mismatch %s:" % key
+                                            + "mismatch '%s'\n" % key
+                                            + "<<<<<<<<<<<. Newly computed output:"
                                             + bcolors.ENDC)
                     self.comparisons.append(test[key])
-                    self.comparisons.append('  !=  ')
+                    self.comparisons.append(bcolors.FAIL
+                                            +'============ disagrees with reference output from ipynb file:  '
+                                            + bcolors.ENDC)
                     self.comparisons.append(ref[key])
+                    self.comparisons.append(bcolors.FAIL
+                                            +'>>>>>>>>>>>>'
+                                            + bcolors.ENDC)
+
                     # self.comparisons.append('==============')
                     # self.comparisons.append('The absolute test string:')
                     # self.comparisons.append(self.sanitize(test[key]))
