@@ -160,7 +160,8 @@ class IPyNbFile(pytest.File):
                         # Also ignore the cells that start with the
                         # comment string PYTEST_VALIDATE_IGNORE_OUTPUT
                         if not (cell.input.startswith('%%') or
-                                cell.input.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT')):
+                                cell.input.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
+                                cell.input.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
 
                             yield IPyNbCell(self.name, self, cell_num, cell)
 
