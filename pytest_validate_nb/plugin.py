@@ -211,12 +211,15 @@ class IPyNbCell(pytest.Item):
     def repr_failure(self, excinfo):
         """ called when self.runtest() raises an exception. """
         if isinstance(excinfo.value, NbCellError):
-            return "\n".join([
-                "Notebook execution failed",
-                "Cell %d: %s\n\n"
-                "Input:\n%s\n\n"
-                "Traceback:\n%s\n" % excinfo.value.args,
-            ])
+            msg_items = [bcolors.FAIL + "Notebook cell execution failed" + bcolors.ENDC]
+            formatstring = bcolors.OKBLUE + "Cell %d: %s\n\n" + \
+                    "Input:\n" + bcolors.ENDC + "%s\n\n" + \
+                    bcolors.OKBLUE + "Traceback:\n%s\n" + bcolors.ENDC
+            msg_items.append(formatstring % excinfo.value.args)
+#                bcolors.OKBLUE + "Cell %d: %s\n\n" +
+#                "Input:" + bcolors.ENDC + "\n%s\n\n" +
+#                bcolors.OKBLUE + "Traceback:\n%s\n"  % excinfo.value.args
+            return "\n".join(msg_items)
         else:
             return "pytest plugin exception: %s" % str(excinfo.value)
 
@@ -246,8 +249,9 @@ class IPyNbCell(pytest.Item):
                 if (self.sanitize(test[key]) !=
                         self.sanitize(ref[key])):
 
-                    self.comparisons.append(bcolors.FAIL
+                    self.comparisons.append(bcolors.OKBLUE
                                             + "mismatch '%s'\n" % key
+                                            + bcolors.FAIL
                                             + "<<<<<<<<<<<. Newly computed output:"
                                             + bcolors.ENDC)
                     self.comparisons.append(test[key])
