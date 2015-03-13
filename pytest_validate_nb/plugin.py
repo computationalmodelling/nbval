@@ -250,7 +250,7 @@ class IPyNbCell(pytest.Item):
                     self.comparisons.append(bcolors.OKBLUE
                                             + " mismatch '%s'\n" % key
                                             + bcolors.FAIL
-                                            + "<<<<<<<<<<<< Newly computed output:"
+                                            + "<<<<<<<<<<<< Newly computed (test) output:"
                                             + bcolors.ENDC)
                     self.comparisons.append(test[key])
                     self.comparisons.append(bcolors.FAIL
