@@ -229,88 +229,90 @@ class IPyNbCell(pytest.Item):
                                                        'png',
                                                        'traceback',
                                                        'latex',
-                                                       'prompt_number')):
+                                                       'prompt_number',
+                                                       'stdout',
+                                                       'stream',
+                                                       'output_type'
+                                                       )):
         self.comparisons = []
 
-        for key in ref:
-            # Check that the output types match
-            if key not in test:
+        # For every different key, we will store the outputs in
+        # single string, in a dictionary with the same keys
+        # At the end, every dictionary entry will be compared
+        # We skip the unimportant keys in the 'skip_compare' list
+        #
+        # We append the outputs because the ipython notebook produces
+        # them in a random number of dictionaries. So, it is easier
+        # to compare only one chunk of data
+        testing_outs, reference_outs = {}, {}
 
-                self.comparisons.append(bcolors.FAIL
-                                        + "missing key: %s != %s"
-                                        % (test.keys(), ref.keys())
-                                        + bcolors.ENDC)
-                return False
-            # Check that the output types are not in the skip_compare list,
-            # sanitise the output line and compare them
-            elif key not in skip_compare:
-                if (self.sanitize(test[key]) !=
-                        self.sanitize(ref[key])):
-
-                    self.comparisons.append(bcolors.OKBLUE
-                                            + " mismatch '%s'\n" % key
-                                            + bcolors.FAIL
-                                            + "<<<<<<<<<<<< Newly computed (test) output:"
-                                            + bcolors.ENDC)
-                    self.comparisons.append(test[key])
-                    self.comparisons.append(bcolors.FAIL
-                                            + '============ disagrees with reference output from ipynb file:  '
-                                            + bcolors.ENDC)
-                    self.comparisons.append(ref[key])
-                    self.comparisons.append(bcolors.FAIL
-                                            + '>>>>>>>>>>>>'
-                                            + bcolors.ENDC)
-
-                    # self.comparisons.append('==============')
-                    # self.comparisons.append('The absolute test string:')
-                    # self.comparisons.append(self.sanitize(test[key]))
-                    # self.comparisons.append('failed to compare with the reference:')
-                    # self.comparisons.append(self.sanitize(ref[key]))
-
-                    return False
-        return True
-
-    def diff_number_outputs(self, test, ref, skip_compare=('metadata',
-                                                           'png',
-                                                           'traceback',
-                                                           'latex',
-                                                           'prompt_number',
-                                                           'stdout',
-                                                           'stream',
-                                                           'output_type'
-                                                           )):
-        """
-        When the number of outputs from test and ref are different,
-        we print the full output of the difference
-
-        Since we are not comparing mismatch entries, we have to manually
-        discard the stdout, stream and output_type keys
-        """
-
-        self.comparisons = []
-        self.comparisons.append(bcolors.FAIL
-                                + 'Mismatch number of outputs'
-                                + ' in cell'
-                                + bcolors.ENDC)
-
-        # ref and test are lists with elements of the type:
+        # Check the references (embedded notebook outputs)
+        # and start appendind the outputs for every
+        # different key. The entries of every output have the structure:
         #
         # {'output_type': 'stream', 'stream': 'stdout',
         #  'text': "The time is: 11:44:21\nToday's date is: 13/03/15\n"}
         #
-        # We look into every element and discard the undesired entries
-        # Every line is appended to the output list
+        # We discard the keys from the skip_compare list
         for reference in ref:
             for key in reference.keys():
                 if key not in skip_compare:
-                    self.comparisons.append(self.sanitize(reference[key]))
+                    # Create the dictionary entries on the fly, from the
+                    # existing ones to be compared
+                    try:
+                        reference_outs[key] += self.sanitize(reference[key])
+                    except:
+                        reference_outs[key] = self.sanitize(reference[key])
 
-        self.comparisons.append('  !=  ')
-
+        # the same for the testing outputs (the cells that are boing executed)
         for testing in test:
             for key in testing.keys():
                 if key not in skip_compare:
-                    self.comparisons.append(self.sanitize(testing[key]))
+                    try:
+                        testing_outs[key] += self.sanitize(testing[key])
+                    except:
+                        testing_outs[key] = self.sanitize(testing[key])
+
+        for key in reference_outs.keys():
+            # Check if they have the same keys
+            if key not in testing_outs.keys():
+                self.comparisons.append(bcolors.FAIL
+                                        + "missing key: %s != %s"
+                                        % (testing_outs.keys(), reference_outs.keys())
+                                        + bcolors.ENDC)
+                return False
+
+            # Compare the large string from the corresponding dictionary entry
+            # We use str() to be sure that the unicode key strings from the
+            # reference are also read from the testing dictionary
+            if testing_outs[str(key)] != reference_outs[key]:
+
+                # print testing_outs[key]
+                # print reference_outs[key]
+
+                self.comparisons.append(bcolors.OKBLUE
+                                        + " mismatch '%s'\n" % key
+                                        + bcolors.FAIL
+                                        + "<<<<<<<<<<<< Newly computed (test) output:"
+                                        + bcolors.ENDC)
+                self.comparisons.append(testing_outs[str(key)])
+                self.comparisons.append(bcolors.FAIL
+                                        + '============ disagrees with reference output from ipynb file:  '
+                                        + bcolors.ENDC)
+                self.comparisons.append(reference_outs[key])
+                self.comparisons.append(bcolors.FAIL
+                                        + '>>>>>>>>>>>>'
+                                        + bcolors.ENDC)
+
+                # self.comparisons.append('==============')
+                # self.comparisons.append('The absolute test string:')
+                # self.comparisons.append(self.sanitize(test[key]))
+                # self.comparisons.append('failed to compare with the reference:')
+                # self.comparisons.append(self.sanitize(ref[key]))
+
+                return False
+        return True
+
 
     """ *****************************************************
         ***************************************************** """
@@ -449,17 +451,24 @@ class IPyNbCell(pytest.Item):
 
         failed = False
 
+        # THIS COMPARISON IS ONLY WHEN THE OUTPUT DICTIONARIES
+        # ARE DIFFERENT, WHICH IS A DIFFERENT ERROR, not
+        # from the output in the notebook
+        #
+        # SINCE WE SANITIZE AND COMPARE, IF THERE ARE DIFFERENT
+        # NUMBER OF LINES, this error will be reported
+        #
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
-        if len(outs) != len(self.cell.outputs):
-            self.diff_number_outputs(outs, self.cell.outputs)
-            failed = True
+        # if len(outs) != len(self.cell.outputs):
+        #     self.diff_number_outputs(outs, self.cell.outputs)
+        #     failed = True
 
         # If the outputs are the same, compare them line by line
-        else:
-            for out, ref in zip(outs, self.cell.outputs):
-                if not self.compare_outputs(out, ref):
-                    failed = True
+        # else:
+        # for out, ref in zip(outs, self.cell.outputs):
+        if not self.compare_outputs(outs, self.cell.outputs):
+            failed = True
 
         # if reply['status'] == 'error':
         # Traceback is only when an error is raised (?)
@@ -505,11 +514,5 @@ class IPyNbCell(pytest.Item):
                 s = re.sub(self.parent.Config.get(sec_name, 'regex'),
                            self.parent.Config.get(sec_name, 'replace'),
                            s)
-
-        # normalize newline:
-        s = s.replace('\r\n', '\n')
-
-        # ignore trailing newlines (but not space)
-        s = s.rstrip('\n')
 
         return s
