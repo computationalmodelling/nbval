@@ -284,13 +284,13 @@ class IPyNbCell(pytest.Item):
                 self.comparisons.append(bcolors.OKBLUE
                                         + " mismatch '%s'\n" % key
                                         + bcolors.FAIL
-                                        + "<<<<<<<<<<<< Newly computed (test) output:"
-                                        + bcolors.ENDC)
-                self.comparisons.append(testing_outs[str(key)])
-                self.comparisons.append(bcolors.FAIL
-                                        + '============ disagrees with reference output from ipynb file:  '
+                                        + "<<<<<<<<<<<< Reference output from ipynb file:"
                                         + bcolors.ENDC)
                 self.comparisons.append(reference_outs[key])
+                self.comparisons.append(bcolors.FAIL
+                                        + '============ disagrees with newly computed (test) output:  '
+                                        + bcolors.ENDC)
+                self.comparisons.append(testing_outs[str(key)])
                 self.comparisons.append(bcolors.FAIL
                                         + '>>>>>>>>>>>>'
                                         + bcolors.ENDC)
