@@ -22,7 +22,7 @@ except:
 
 wrapped_stdin = sys.stdin
 sys.stdin = sys.__stdin__
-from IPython.kernel import KernelManager
+from IPython.kernel.manager import start_new_kernel
 sys.stdin = wrapped_stdin
 try:
     from Queue import Empty
@@ -89,10 +89,9 @@ class RunningKernel(object):
     """
 
     def __init__(self):
-        # Start an ipython kernel
-        self.km = KernelManager()
-        self.km.start_kernel(extra_arguments=['--matplotlib=inline'],
-                             stderr=open(os.devnull, 'w'))
+        # Start an IPpython kernel
+        self.km, self.kc = start_new_kernel(extra_arguments=['--matplotlib=inline'],
+                                            stderr=open(os.devnull, 'w'))
         # We need iopub to read every line in the cells
         """
         http://ipython.org/ipython-doc/stable/development/messaging.html
@@ -112,19 +111,7 @@ class RunningKernel(object):
         Check: stderr and stdout in the NbCellError function at the end
         (if we get an error, check the msg_type and make the test to fail)
         """
-        try:
-            # This procedure seems to work with the newest iPython versions
-            self.kc = self.km.client()
-            self.kc.start_channels()
-            self.iopub = self.kc.iopub_channel
-        except:
-            # Otherwise load it as
-            self.kc = self.km
-            self.kc.start_channels()
-            self.iopub = self.kc.sub_channel
-
-        # Start the shell to execute cels in the notebook (send messages?)
-        self.shell = self.kc.shell_channel
+        self.iopub = self.kc.iopub_channel
 
     # These options are in case we wanted to restart the nb every time
     # it is executed a certain task
@@ -133,7 +120,7 @@ class RunningKernel(object):
 
     def stop(self):
         self.kc.stop_channels()
-        self.km.shutdown_kernel()
+        self.km.shutdown_kernel(now=True)
         del self.km
 
 
@@ -159,6 +146,9 @@ class IPyNbFile(pytest.File):
                         # i.e. cell code starts with '%%'
                         # Also ignore the cells that start with the
                         # comment string PYTEST_VALIDATE_IGNORE_OUTPUT
+                        # NOTE: This actually skips execution, which probably isn't what we want!
+                        #       It is typically helpful to execute the cell (to make sure that at
+                        #       least the code doesn't fail) but then discard the result.
                         if not (cell.input.startswith('%%') or
                                 cell.input.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
                                 cell.input.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
@@ -198,11 +188,13 @@ class IPyNbCell(pytest.Item):
     def __init__(self, name, parent, cell_num, cell):
         super(IPyNbCell, self).__init__(name, parent)
 
-        # Get the numbers
+        # Store reference to parent IPynbFile so that we have access
+        # to the running kernel.
+        self.parent = parent
+
         self.cell_num = cell_num
         self.cell = cell
 
-        #
         self.comparisons = None
 
     """ *****************************************************
@@ -323,17 +315,13 @@ class IPyNbCell(pytest.Item):
         It is very common for ipython notebooks to run through assuming a
         single kernel.
         """
-        # self.parent.kernel.restart()
-
-        # Get the current shell for executing code cells
-        shell = self.parent.kernel.shell
         # Call iopub to get the messages from the executions
         iopub = self.parent.kernel.iopub
 
         # Execute the code from the current cell and get the msg_id of the
         #  shell process.
-        msg_id = shell.execute(self.cell.input,
-                               allow_stdin=False)
+        msg_id = self.parent.kernel.kc.execute(self.cell.input,
+                                               allow_stdin=False)
 
         # Time for the reply of the cell execution
         timeout = 2000
@@ -346,7 +334,7 @@ class IPyNbCell(pytest.Item):
         # obtained: 'ok' OR 'error' OR 'abort'
         # We can also get how many cells have been executed
         # until here, with the 'execution_count' entry
-        shell.get_msg(timeout=timeout)
+        self.parent.kernel.kc.get_shell_msg(timeout=timeout)
 
         while True:
             """
@@ -356,8 +344,7 @@ class IPyNbCell(pytest.Item):
             until we reach the end of the cell.
             """
             try:
-                # Get one message at a time, per code block inside
-                # the cell
+                # Get one message at a time, per code block inside the cell
                 msg = iopub.get_msg(timeout=1.)
 
             except Empty:
@@ -367,7 +354,7 @@ class IPyNbCell(pytest.Item):
                 #                      " executing cell: %s" (timeout,
                 #                                             self.cell.input))
                 # Just break the loop when the output is empty
-                    break
+                break
 
             """
             Now that we have the output from a piece of code
@@ -383,13 +370,14 @@ class IPyNbCell(pytest.Item):
             msg_type = msg['msg_type']
 
             # REF:
-            # pyin: To let all frontends know what code is being executed at
-            # any given time, these messages contain a re-broadcast of the code
-            # portion of an execute_request, along with the execution_count.
-            if msg_type in ('status', 'pyin'):
+            # execute_input: To let all frontends know what code is
+            # being executed at any given time, these messages contain a
+            # re-broadcast of the code portion of an execute_request,
+            # along with the execution_count.
+            if msg_type in ('status', 'execute_input'):
                 continue
 
-            # If there is no more output, conitnue with the executions
+            # If there is no more output, continue with the executions
             # (it will break if it is empty, with the previous statements)
             #
             # REF:
@@ -411,7 +399,7 @@ class IPyNbCell(pytest.Item):
                 outs = []
                 continue
 
-            # WE COULD ADD HERE a condition for the 'pyerr' message type
+            # WE COULD ADD HERE a condition for the 'error' message type
             # Making the test to fail
 
             """
@@ -424,8 +412,8 @@ class IPyNbCell(pytest.Item):
             # Now check what type of output it is
             if msg_type == 'stream':
                 out.stream = reply['name']
-                out.text = reply['data']
-            elif msg_type in ('display_data', 'pyout'):
+                out.text = reply['text']
+            elif msg_type in ('display_data', 'execute_result'):
                 # REF:
                 # data and metadata are identical to a display_data message.
                 # the object being displayed is that passed to the display
@@ -435,7 +423,7 @@ class IPyNbCell(pytest.Item):
                     attr = mime.split('/')[-1].lower()
                     attr = attr.replace('+xml', '').replace('plain', 'text')
                     setattr(out, attr, data)
-                if msg_type == 'pyout':
+                if msg_type == 'execute_result':
                     out.prompt_number = reply['execution_count']
             else:
                 print("unhandled iopub msg:", msg_type)
