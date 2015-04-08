@@ -86,13 +86,24 @@ class RunningKernel(object):
     """
     Running a Kernel in IPython, info can be found at:
     http://ipython.org/ipython-doc/stable/development/messaging.html
+
+    The purpose of this class is to encapsulate interaction with the
+    IPython kernel. Thus any changes on the IPython side to how
+    kernels are started.managed should not require any changes outside
+    this class.
+
     """
     def __init__(self):
-        # Start an IPpython kernel
         self.km, self.kc = start_new_kernel(extra_arguments=['--matplotlib=inline'],
                                             stderr=open(os.devnull, 'w'))
         # We need iopub to read every line in the cells
         self.iopub = self.kc.iopub_channel
+
+    def get_message(self, timeout=None):
+        return self.iopub.get_msg(timeout=timeout)
+
+    def execute_cell_input(self, cell_input, allow_stdin=None):
+        return self.kc.execute(cell_input, allow_stdin=allow_stdin)
 
     # These options are in case we wanted to restart the nb every time
     # it is executed a certain task
@@ -106,6 +117,13 @@ class RunningKernel(object):
 
 
 class IPyNbFile(pytest.File):
+    def __init__(self, *args, **kwargs):
+        super(IPyNbFile, self).__init__(*args, **kwargs)
+        self.kernel = None  # will be initialised in setup()
+
+    def get_kernel_message(self, timeout=None):
+        return self.kernel.get_message(timeout=timeout)
+
     # Read through the specified notebooks and load the data
     # (which is in json format)
     def collect(self):
@@ -296,13 +314,10 @@ class IPyNbCell(pytest.Item):
         It is very common for ipython notebooks to run through assuming a
         single kernel.
         """
-        # Call iopub to get the messages from the executions
-        iopub = self.parent.kernel.iopub
-
-        # Execute the code from the current cell and get the msg_id of the
-        #  shell process.
-        msg_id = self.parent.kernel.kc.execute(self.cell.input,
-                                               allow_stdin=False)
+        # Execute the code from the current cell and get the msg_id
+        # of the shell process.
+        msg_id = self.parent.kernel.execute_cell_input(
+            self.cell.input, allow_stdin=False)
 
         # Time for the reply of the cell execution
         timeout = 2000
@@ -315,7 +330,7 @@ class IPyNbCell(pytest.Item):
         # obtained: 'ok' OR 'error' OR 'abort'
         # We can also get how many cells have been executed
         # until here, with the 'execution_count' entry
-        self.parent.kernel.kc.get_shell_msg(timeout=timeout)
+        #self.parent.kernel.kc.get_shell_msg(timeout=timeout)
 
         while True:
             """
@@ -326,7 +341,7 @@ class IPyNbCell(pytest.Item):
             """
             try:
                 # Get one message at a time, per code block inside the cell
-                msg = iopub.get_msg(timeout=1.)
+                msg = self.parent.get_kernel_message(timeout=1.)
 
             except Empty:
                 # This is not working: ! The code will not be checked
