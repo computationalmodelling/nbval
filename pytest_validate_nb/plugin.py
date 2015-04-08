@@ -76,7 +76,7 @@ def pytest_addoption(parser):
 
 def pytest_collect_file(path, parent):
     """
-    Collect iPython notebooks using the specified pytest hook
+    Collect IPython notebooks using the specified pytest hook
     """
     if path.fnmatch("*.ipynb") and parent.config.option.ipynb:
         return IPyNbFile(path, parent)
@@ -87,7 +87,6 @@ class RunningKernel(object):
     Running a Kernel in IPython, info can be found at:
     http://ipython.org/ipython-doc/stable/development/messaging.html
     """
-
     def __init__(self):
         # Start an IPpython kernel
         self.km, self.kc = start_new_kernel(extra_arguments=['--matplotlib=inline'],
@@ -117,7 +116,7 @@ class IPyNbFile(pytest.File):
             cell_num = 0
 
             # Currently there is only 1 worksheet (it seems in newer versions
-            # of iPython, they are going to get rid of this option)
+            # of IPython, they are going to get rid of this option)
             # For every worksheet, read every cell associated to it
             for ws in self.nb.worksheets:
                 for cell in ws.cells:
@@ -144,7 +143,7 @@ class IPyNbFile(pytest.File):
                     # Update 'code' cell count
                     cell_num += 1
 
-    # Start the iPython kernel and the sanitize instance, using the
+    # Start the IPython kernel and the sanitize instance, using the
     # ConfigParser library, if the option was selected in the input
     # These are parent options of the IPyNbCell class
     # The self.Config is used in the sanitize function of the
