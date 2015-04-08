@@ -1,4 +1,4 @@
-A py.test plugin for validating ipython notebooks
+A py.test plugin for validating IPython notebooks
 
 License applies to all source code, and binaries generated from the
 source code, found at
