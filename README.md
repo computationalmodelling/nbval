@@ -60,11 +60,11 @@ it can be executed:
     py.test --ipynb my_notebook.ipynb
 
 for an specific notebook. 
-If the output lines are going to be sanitized, an extra flag, `--sanitize_file`
+If the output lines are going to be sanitized, an extra flag, `--sanitize-file`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
 
-    py.test --ipynb my_notebook.ipynb --sanitize_file path/to/my_sanitize_file
+    py.test --ipynb my_notebook.ipynb --sanitize-file path/to/my_sanitize_file
 
 where `my_sanitize_file` has the structure
 

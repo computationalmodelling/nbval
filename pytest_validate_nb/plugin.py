@@ -58,7 +58,7 @@ def pytest_addoption(parser):
     group.addoption('--ipynb', action='store_true',
                     help="Validate IPython notebooks")
 
-    group.addoption('--sanitize_file',
+    group.addoption('--sanitize-file',
                     help='File with regex expressions to sanitize '
                          'the outputs. This option only works when '
                          'the --ipynb flag is passed to py.test')
