@@ -4,7 +4,7 @@ import textwrap
 from pytest_validate_nb.plugin import *
 
 
-def test_read_sanitize_patterns():
+def test_get_sanitize_patterns():
     file_contents = textwrap.dedent("""
         [Section1]
         regex: foo
@@ -18,7 +18,7 @@ def test_read_sanitize_patterns():
         replace: bar2
         """)
 
-    patterns = read_sanitize_patterns(file_contents)
+    patterns = get_sanitize_patterns(file_contents)
     assert patterns == {'foo': 'bar2',
                        'quux': '42',
                        }

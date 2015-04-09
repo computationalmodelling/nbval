@@ -8,12 +8,7 @@ Authors: D. Cortes, O. Laslett
 import pytest
 import os
 import sys
-
-# For regular expressions:
 import re
-# For using a external file with the regex expressions
-# to sanitise the outputs
-import ConfigParser
 
 try:
     from exceptions import Exception
@@ -161,23 +156,36 @@ class IPyNbFile(pytest.File):
                     # Update 'code' cell count
                     cell_num += 1
 
-    # Start the IPython kernel and the sanitize instance, using the
-    # ConfigParser library, if the option was selected in the input
-    # These are parent options of the IPyNbCell class
-    # The self.Config is used in the sanitize function of the
-    # IPyNbCell class
     def setup(self):
+        """
+        Start IPyton kernel and set up sanitize patterns.
+        """
         self.fixture_cell = None
         self.kernel = RunningKernel()
+        self.setup_sanitize_patterns()
 
-        try:
-            self.sanitize_file = self.parent.config.option.sanitize_file
-            self.Config = ConfigParser.ConfigParser()
-            # When reading the file, the sections are registered.
-            # Currently, the section names are not meaningful
-            self.Config.read(self.sanitize_file)
-        except:
-            self.sanitize_file = None
+    def get_sanitize_files(self):
+        """
+        Return list of all sanitize files provided by the user on the command line.
+
+        N.B.: We only support one sanitize file at the moment, but
+              this is likely to change in the future
+
+        """
+        if self.parent.config.option.sanitize_file is not None:
+            return [self.parent.config.option.sanitize_file]
+        else:
+            return []
+
+    def setup_sanitize_patterns(self):
+        """
+        Read sanitize patterns from config file (of one was provided on the command line).
+        """
+        self.sanitize_patterns = {}
+
+        for fname in self.get_sanitize_files():
+            with open(fname, 'r') as f:
+                self.sanitize_patterns.update(get_sanitize_patterns(f.read()))
 
     def teardown(self):
         self.kernel.stop()
@@ -493,16 +501,12 @@ class IPyNbCell(pytest.Item):
         is passed when py.test is called. Otherwise, the strings
         are not processed
         """
-        if self.parent.sanitize_file:
-            for sec_name in self.parent.Config.sections():
-                s = re.sub(self.parent.Config.get(sec_name, 'regex'),
-                           self.parent.Config.get(sec_name, 'replace'),
-                           s)
-
+        for regex, replace in self.parent.sanitize_patterns.iteritems():
+            s = re.sub(regex, replace, s)
         return s
 
 
-def read_sanitize_patterns(string):
+def get_sanitize_patterns(string):
     """
     *Arguments*
 
@@ -510,6 +514,12 @@ def read_sanitize_patterns(string):
 
         String containing a list of regex-replace pairs as would be
         read from a sanitize config file.
+
+    *Returns*
+
+    A dictionary of regex-replace pairs. If the input string contains
+    the same regex multiple times, the last one will take effect.
+
     """
     matches = re.findall('^regex: (.*)$\n^replace: (.*)$',
                          string,
