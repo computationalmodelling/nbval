@@ -2,13 +2,15 @@ A py.test plugin for validating IPython notebooks
 
 License applies to all source code, and binaries generated from the
 source code, found at
-https://bitbucket.org/davidcorteso/ipython-nb-testing/src
+https://github.com/computationalmodelling/pytest_validate_nb
+
 ------------------------------------------------------------
 Copyright (C) 2014  Oliver W. Laslett  <O.Laslett@soton.ac.uk>
 	      	    David Cortes-Ortuno
 		    Maximilian Albert
 		    Ondrej Hovorka
-		    Hans Fanghor
+		    Hans Fangohr
+		    (University of Southampton, UK)
 	      	    
 
 All rights reserved.
