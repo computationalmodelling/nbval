@@ -58,31 +58,31 @@ it can be executed:
     py.test --ipynb my_notebook.ipynb
 
 for an specific notebook. 
-If the output lines are going to be sanitized, an extra flag, `--sanitize-file`
+If the output lines are going to be sanitized, an extra flag, `--sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
 
-    py.test --ipynb my_notebook.ipynb --sanitize-file path/to/my_sanitize_file
+    py.test --ipynb my_notebook.ipynb --sanitize-with path/to/my_sanitize_file
 
-where `my_sanitize_file` has the structure
+where `my_sanitize_file` has the following structure.
 
 ```
-[regex1]
+[Section1]
 regex: [a-z]* 
 replace: abcd
 
-[regex2]
 regex: [1-9]*
 replace: 0000
+
+[Section2]
+regex: foo
+replace: bar
 ```
 
 The `regex` option contains the expression that is going to be matched in the outputs, and
 `replace` is the string that will replace the `regex` match. Currently, the section
 names do not have any meaning or influence in the testing system, it will take
 all the sections and replace the corresponding options.
-
-Examples of a notebook and regex file are found in the `finmag_nb_test.ipynb`
-and `regex_sanitize` files, correspondingly.
 
 ## Help
 The `py.test` system help can be obtained with `py.test -h`, which will
