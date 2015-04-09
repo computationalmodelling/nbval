@@ -1,5 +1,3 @@
-![2000px-University_of_Southampton_Logo.svg.png](https://bitbucket.org/repo/poLqzg/images/294970193-2000px-University_of_Southampton_Logo.svg.png)
-
 # Py.test plugin for IPython notebook validation
 
 The plugin adds functionality to py.test to recognise and collect IPython
