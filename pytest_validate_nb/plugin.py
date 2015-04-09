@@ -500,3 +500,19 @@ class IPyNbCell(pytest.Item):
                            s)
 
         return s
+
+
+def read_sanitize_patterns(string):
+    """
+    *Arguments*
+
+    string:  str
+
+        String containing a list of regex-replace pairs as would be
+        read from a sanitize config file.
+    """
+    matches = re.findall('^regex: (.*)$\n^replace: (.*)$',
+                         string,
+                         flags=re.MULTILINE)
+    pats = {key: val for (key, val) in matches}
+    return pats
