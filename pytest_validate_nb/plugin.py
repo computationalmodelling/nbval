@@ -386,6 +386,8 @@ class IPyNbCell(pytest.Item):
             self.cell.source, allow_stdin=False)
 
         # Time for the reply of the cell execution
+        # (maximum time, it can finish before, we could make a timeout
+        # exception in the future)
         timeout = 2000
 
         # This list stores the output information for the entire cell
@@ -407,7 +409,7 @@ class IPyNbCell(pytest.Item):
             """
             try:
                 # Get one message at a time, per code block inside the cell
-                msg = self.parent.get_kernel_message(timeout=1.)
+                msg = self.parent.get_kernel_message(timeout=timeout)
 
             except Empty:
                 # This is not working: ! The code will not be checked
@@ -468,10 +470,10 @@ class IPyNbCell(pytest.Item):
             # state and when it finishes, it will enter the 'idle' state.
             # The kernel will publish state 'starting' exactly
             # once at process startup.
-            elif (msg_type == 'clear_output'
-                  and msg_type['execution_state'] == 'idle'):
-                outs = []
-                continue
+            # elif (msg_type == 'clear_output'
+            #       and msg_type['execution_state'] == 'idle'):
+            #     outs = []
+            #     continue
 
             # WE COULD ADD HERE a condition for the 'error' message type
             # Making the test to fail
