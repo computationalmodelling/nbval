@@ -10,10 +10,9 @@ import os
 import sys
 import re
 
-try:
-    from exceptions import Exception
-except:
-    pass
+PY3 = sys.version_info[0] >= 3
+
+import six
 
 wrapped_stdin = sys.stdin
 sys.stdin = sys.__stdin__
@@ -520,7 +519,7 @@ class IPyNbCell(pytest.Item):
             # elif msg_type in ('display_data', 'execute_result'):
             elif msg_type in ('display_data', 'execute_result'):
                 out['metadata'] = reply['metadata']
-                for mime, data in reply['data'].iteritems():
+                for mime, data in six.iteritems(reply['data']):
                 # This could be useful for reference or backward compatibility
                 #     attr = mime.split('/')[-1].lower()
                 #     attr = attr.replace('+xml', '').replace('plain', 'text')
@@ -599,7 +598,7 @@ class IPyNbCell(pytest.Item):
         fix universal newlines, strip trailing newlines,
         and normalize likely random values (memory addresses and UUIDs)
         """
-        if not isinstance(s, basestring):
+        if not isinstance(s, six.string_types):
             return s
 
         """
@@ -612,7 +611,7 @@ class IPyNbCell(pytest.Item):
         is passed when py.test is called. Otherwise, the strings
         are not processed
         """
-        for regex, replace in self.parent.sanitize_patterns.iteritems():
+        for regex, replace in six.iteritems(self.parent.sanitize_patterns):
             s = re.sub(regex, replace, s)
         return s
 
