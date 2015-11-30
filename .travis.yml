@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.5"
+  - "3.4"
+  - "2.7"
+# command to install dependencies
+install:
+  - pip install IPython ipykernel nbformat six
+  - pip install .
+# command to run tests
+script: py.test tests/ --ipynb --sanitize-with tests/sanitize-defaults.cfg
