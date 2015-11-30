@@ -538,8 +538,8 @@ class IPyNbCell(pytest.Item):
                 print("unhandled iopub msg:", msg_type)
                 try:
                     # More information in case msg_type =' error'
-                    print reply['ename']
-                    print reply['evalue']
+                    print(reply['ename'])
+                    print(reply['evalue'])
                 except:
                     continue
 
