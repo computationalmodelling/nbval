@@ -1,5 +1,7 @@
 # Py.test plugin for IPython notebook validation
 
+[![Build Status](https://travis-ci.org/computationalmodelling/pytest_validate_nb.svg)](https://travis-ci.org/computationalmodelling/pytest_validate_nb)
+
 The plugin adds functionality to py.test to recognise and collect IPython
 notebooks. The intended purpose of the tests is to determine whether execution
 of the stored inputs match the stored outputs of the `.ipynb` file.
@@ -34,15 +36,15 @@ is a usual configuration file for the `ConfigParser` library.
 Regarding the execution, roughly, the script initiates an
 IPython Kernel with a `shell` and
 an `iopub` sockets. The `shell` is needed to execute the cells in
-the notebook (it sends requests to the Kernel) and the `iopub` provides 
+the notebook (it sends requests to the Kernel) and the `iopub` provides
 an interface to get the messages from the outputs. The contents
 of the messages obtained from the Kernel are organised in dictionaries
 with different information, such as time stamps of executions,
 cell data types, cell types, the status of the Kernel, username, etc.
 
-In general, the functionality of the IPython notebook system is 
+In general, the functionality of the IPython notebook system is
 quite complex, but a detailed explanation of the messages
-and how the system works, can be found here 
+and how the system works, can be found here
 
 http://ipython.org/ipython-doc/stable/development/messaging.html
 
@@ -57,7 +59,7 @@ it can be executed:
 
     py.test --ipynb my_notebook.ipynb
 
-for an specific notebook. 
+for an specific notebook.
 If the output lines are going to be sanitized, an extra flag, `--sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
@@ -68,7 +70,7 @@ where `my_sanitize_file` has the following structure.
 
 ```
 [Section1]
-regex: [a-z]* 
+regex: [a-z]*
 replace: abcd
 
 regex: [1-9]*
@@ -96,7 +98,7 @@ This plugin was inspired by Andrea Zonca's py.test plugin for collecting unit
 tests in the IPython notebooks ( https://github.com/zonca/pytest-ipynb ).
 
 
-It is mostly based on the template in https://gist.github.com/timo/2621679 
+It is mostly based on the template in https://gist.github.com/timo/2621679
 and the code of a testing system for notebooks https://gist.github.com/minrk/2620735
 which we integrated and mixed with the `py.test` system.
 
