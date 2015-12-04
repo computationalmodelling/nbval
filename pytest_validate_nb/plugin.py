@@ -482,6 +482,12 @@ class IPyNbCell(pytest.Item):
             and analyse the outputs
             """
             reply = msg['content']
+
+            # Debugging
+            if msg_type == 'stream' and reply['text'].startswith('PTVNB-DBG:'):
+                print(reply['text'])
+                continue
+
             out = NotebookNode(output_type=msg_type)
 
             # print '---------------------------- CELL ----------------------'
@@ -533,14 +539,13 @@ class IPyNbCell(pytest.Item):
                 # if msg_type == 'execute_result':
                 #     out.prompt_number = reply['execution_count']
 
+            elif msg_type == 'error':
+                for line in reply['traceback']:
+                    print(line)
+                print(reply['ename'], ':', reply['evalue'])
+
             else:
                 print("unhandled iopub msg:", msg_type)
-                try:
-                    # More information in case msg_type =' error'
-                    print(reply['ename'])
-                    print(reply['evalue'])
-                except:
-                    continue
 
             outs.append(out)
 
