@@ -22,7 +22,11 @@ install:
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION jupyter six pytest pip matplotlib
   - source activate test-environment
+  # $VIRTUAL_ENV is left over from the virtualenv Travis prepared. IPython will
+  # see it and add the venv's site-packages to sys.path, which causes import
+  # confusion. Therefore we unset it here.
+  - unset VIRTUAL_ENV
   - pip install .
 
 # command to run tests
-script: py.test tests/ --ipynb --sanitize-with tests/sanitize-defaults.cfg
+script: py.test tests/ --ipynb --sanitize-with tests/sanitize_defaults.cfg

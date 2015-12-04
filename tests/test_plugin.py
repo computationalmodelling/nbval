@@ -19,6 +19,7 @@ def test_get_sanitize_patterns():
         """)
 
     patterns = get_sanitize_patterns(file_contents)
-    assert patterns == {'foo': 'bar2',
-                       'quux': '42',
-                       }
+    assert patterns == [('foo', 'bar1'),
+                        ('quux', '42'),
+                        ('foo', 'bar2'),
+                       ]
