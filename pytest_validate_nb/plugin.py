@@ -10,6 +10,8 @@ import os
 import sys
 import re
 
+from collections import OrderedDict
+
 PY3 = sys.version_info[0] >= 3
 
 import six
@@ -118,6 +120,7 @@ class IPyNbFile(pytest.File):
     def __init__(self, *args, **kwargs):
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.kernel = None  # will be initialised in setup()
+        self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
 
     def get_kernel_message(self, timeout=None):
         return self.kernel.get_message(timeout=timeout)
@@ -165,7 +168,6 @@ class IPyNbFile(pytest.File):
         """
         Start IPyton kernel and set up sanitize patterns.
         """
-        self.fixture_cell = None
         self.kernel = RunningKernel()
         self.setup_sanitize_patterns()
 
@@ -186,8 +188,6 @@ class IPyNbFile(pytest.File):
         """
         Read sanitize patterns from config file (of one was provided on the command line).
         """
-        self.sanitize_patterns = {}
-
         for fname in self.get_sanitize_files():
             with open(fname, 'r') as f:
                 self.sanitize_patterns.update(get_sanitize_patterns(f.read()))
@@ -632,12 +632,8 @@ def get_sanitize_patterns(string):
 
     *Returns*
 
-    A dictionary of regex-replace pairs. If the input string contains
-    the same regex multiple times, the last one will take effect.
-
+    A list of (regex, replace) pairs.
     """
-    matches = re.findall('^regex: (.*)$\n^replace: (.*)$',
+    return re.findall('^regex: (.*)$\n^replace: (.*)$',
                          string,
                          flags=re.MULTILINE)
-    pats = {key: val for (key, val) in matches}
-    return pats
