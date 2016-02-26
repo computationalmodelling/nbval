@@ -1,19 +1,19 @@
 """
 pytest ipython plugin modification
 
-Authors: D. Cortes, O. Laslett
+Authors: D. Cortes, O. Laslett, T. Kluyver
 
 """
 
+# import the pytest API
 import pytest
 import os
 import sys
 import re
-
 from collections import OrderedDict
 
+# for python 3 compatibility
 PY3 = sys.version_info[0] >= 3
-
 import six
 
 # Kernel for jupyter notebooks
@@ -24,10 +24,10 @@ try:
 except:
     from queue import Empty
 
+# for reading notebook files
 from nbformat import reads, NotebookNode
 
-
-# Colours for outputs
+# define colours for pretty outputs
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -48,6 +48,8 @@ def pytest_addoption(parser):
     Adds an optional flag to pass a config file with regex
     expressions to sanitise the outputs
     Only will work if the --ipynb flag is present
+
+    This is called by the pytest API
     """
     group = parser.getgroup("general")
     group.addoption('--ipynb', action='store_true',
