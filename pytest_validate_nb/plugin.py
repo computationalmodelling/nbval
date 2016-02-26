@@ -19,8 +19,8 @@ import six
 wrapped_stdin = sys.stdin
 sys.stdin = sys.__stdin__
 
-# Kernel for IPython notebooks
-from IPython.kernel.manager import start_new_kernel
+# Kernel for jupyter notebooks
+from jupyter_client.manager import start_new_kernel
 
 sys.stdin = wrapped_stdin
 try:
@@ -28,8 +28,7 @@ try:
 except:
     from queue import Empty
 
-# from IPython.nbformat.current import reads, NotebookNode
-from IPython.nbformat import reads, NotebookNode
+from nbformat import reads, NotebookNode
 
 
 # Colours for outputs
