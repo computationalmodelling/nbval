@@ -61,16 +61,6 @@ def pytest_addoption(parser):
                          'the --ipynb flag is passed to py.test')
 
 
-# def pytest_configure(config):
-#     """ called after command line options have been parsed
-#         and all plugins and initial conftest files been loaded.
-#     """
-#     if config.option.sanitise_file:
-#         if not config.option.ipynb:
-#             raise NameError('ERROR: Config file without --ipynb flag')
-#         else:
-
-
 def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
@@ -79,27 +69,47 @@ def pytest_collect_file(path, parent):
         return IPyNbFile(path, parent)
 
 
+
 class RunningKernel(object):
     """
-    Running a Kernel in IPython, info can be found at:
-    http://ipython.org/ipython-doc/stable/development/messaging.html
+    Running a Kernel a Jupyter, info can be found at:
+    http://jupyter-client.readthedocs.org/en/latest/messaging.html
 
     The purpose of this class is to encapsulate interaction with the
-    IPython kernel. Thus any changes on the IPython side to how
-    kernels are started.managed should not require any changes outside
+    jupyter kernel. Thus any changes on the jupyter side to how
+    kernels are started/managed should not require any changes outside
     this class.
 
     """
     def __init__(self):
-        self.km, self.kc = start_new_kernel(extra_arguments=['--matplotlib=inline'],
-                                            stderr=open(os.devnull, 'w'))
-        # We need iopub to read every line in the cells
+        self.km, self.kc = \
+                start_new_kernel(extra_arguments=['--matplotlib=inline'],
+                                 stderr=open(os.devnull, 'w'))
+
+        # need iopub broadcast channel
+        # used by the kernel to broadcast 'side-effects'
+        # includes stdout, stderr, and python output.
+        # also broadcasts requests made to the kernel
         self.iopub = self.kc.iopub_channel
 
+
     def get_message(self, timeout=None):
+        """
+        Function is used to get a message from the iopub channel.
+        Timeout is None by default
+        When timeout is reached
+        """
         return self.iopub.get_msg(timeout=timeout)
 
     def execute_cell_input(self, cell_input, allow_stdin=None):
+        """
+        Executes a string of python code in cell input.
+        We do not allow the kernel to make requests to the stdin
+             this is the norm for notebooks
+
+        Function returns a unique message id of the reply from
+        the kernel.
+        """
         return self.kc.execute(cell_input, allow_stdin=allow_stdin)
 
     # These options are in case we wanted to restart the nb every time
