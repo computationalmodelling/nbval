@@ -132,17 +132,62 @@ class RunningKernel(object):
 
 
 class IPyNbFile(pytest.File):
+    """
+    This class represents a pytest collector object.
+    A collector is associated with an ipynb file and collects the cells
+    in the notebook for testing.
+    yields pytest items that are required by pytest.
+    """
     def __init__(self, *args, **kwargs):
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.kernel = None  # will be initialised in setup()
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
 
+    def setup(self):
+        """
+        Called by pytest to setup the collector cells in .
+        Here we start a kernel and setup the sanitize patterns.
+        """
+        self.kernel = RunningKernel()
+        self.setup_sanitize_files()
+
+
+    def setup_sanitize_files(self):
+        """
+        For each of the sanitize files that were specified as command line options
+        load the contents of the file into the sanitise patterns dictionary.
+        """
+        for fname in self.get_sanitize_files():
+            with open(fname, 'r') as f:
+                self.sanitize_patterns.update(get_sanitize_patterns(f.read()))
+
+
+    def get_sanitize_files(self):
+        """
+        Return list of all sanitize files provided by the user on the command line.
+
+        N.B.: We only support one sanitize file at the moment, but
+              this is likely to change in the future
+
+        """
+        if self.parent.config.option.sanitize_with is not None:
+            return [self.parent.config.option.sanitize_with]
+        else:
+            return []
+
     def get_kernel_message(self, timeout=None):
+        """
+        Gets a message from the iopub channel of the notebook kernel.
+        """
         return self.kernel.get_message(timeout=timeout)
 
     # Read through the specified notebooks and load the data
     # (which is in json format)
     def collect(self):
+        """
+        The collect function is required by pytest and is used to yield pytest
+        Item objects. We specify an Item for each code cell in the notebook.
+        """
         with self.fspath.open() as f:
             # self.nb = reads(f.read(), 'json')
             self.nb = reads(f.read(), 4)
@@ -154,7 +199,6 @@ class IPyNbFile(pytest.File):
             # Currently there is only 1 worksheet (it seems in newer versions
             # of IPython, they are going to get rid of this option)
             # For every worksheet, read every cell associated to it
-
             for cell in self.nb.cells:
                 # Skip the cells that have text, headings or related stuff
                 # Only test code cells
@@ -178,34 +222,6 @@ class IPyNbFile(pytest.File):
 
                 # Update 'code' cell count
                 cell_num += 1
-
-    def setup(self):
-        """
-        Start IPyton kernel and set up sanitize patterns.
-        """
-        self.kernel = RunningKernel()
-        self.setup_sanitize_patterns()
-
-    def get_sanitize_files(self):
-        """
-        Return list of all sanitize files provided by the user on the command line.
-
-        N.B.: We only support one sanitize file at the moment, but
-              this is likely to change in the future
-
-        """
-        if self.parent.config.option.sanitize_with is not None:
-            return [self.parent.config.option.sanitize_with]
-        else:
-            return []
-
-    def setup_sanitize_patterns(self):
-        """
-        Read sanitize patterns from config file (of one was provided on the command line).
-        """
-        for fname in self.get_sanitize_files():
-            with open(fname, 'r') as f:
-                self.sanitize_patterns.update(get_sanitize_patterns(f.read()))
 
     def teardown(self):
         self.kernel.stop()
