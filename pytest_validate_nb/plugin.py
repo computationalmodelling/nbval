@@ -140,7 +140,6 @@ class IPyNbFile(pytest.File):
     """
     def __init__(self, *args, **kwargs):
         super(IPyNbFile, self).__init__(*args, **kwargs)
-        self.kernel = None  # will be initialised in setup()
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
 
     def setup(self):
@@ -189,7 +188,6 @@ class IPyNbFile(pytest.File):
         Item objects. We specify an Item for each code cell in the notebook.
         """
         with self.fspath.open() as f:
-            # self.nb = reads(f.read(), 'json')
             self.nb = reads(f.read(), 4)
 
             # Start the cell count
