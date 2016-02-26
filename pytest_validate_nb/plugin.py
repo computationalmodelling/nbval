@@ -16,13 +16,13 @@ PY3 = sys.version_info[0] >= 3
 
 import six
 
-wrapped_stdin = sys.stdin
-sys.stdin = sys.__stdin__
+#wrapped_stdin = sys.stdin
+#sys.stdin = sys.__stdin__
 
 # Kernel for jupyter notebooks
 from jupyter_client.manager import start_new_kernel
 
-sys.stdin = wrapped_stdin
+#sys.stdin = wrapped_stdin
 try:
     from Queue import Empty
 except:
