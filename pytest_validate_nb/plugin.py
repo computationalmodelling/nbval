@@ -228,11 +228,8 @@ class IPyNbCell(pytest.Item):
         # Store reference to parent IPynbFile so that we have access
         # to the running kernel.
         self.parent = parent
-
         self.cell_num = cell_num
         self.cell = cell
-
-        self.comparisons = None
         self.docompare = docompare
 
     """ *****************************************************
