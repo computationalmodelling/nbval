@@ -1,12 +1,13 @@
-# Py.test plugin for IPython notebook validation
+# Py.test plugin for validating Jupyter notebooks
 
 [![Build Status](https://travis-ci.org/computationalmodelling/pytest_validate_nb.svg)](https://travis-ci.org/computationalmodelling/pytest_validate_nb)
 
-The plugin adds functionality to py.test to recognise and collect IPython
+The plugin adds functionality to py.test to recognise and collect Jupyter
 notebooks. The intended purpose of the tests is to determine whether execution
-of the stored inputs match the stored outputs of the `.ipynb` file.
+of the stored inputs match the stored outputs of the `.ipynb` file. Whilst also
+ensuring that the notebooks are running without errors.
 
-The tests were designed to ensure that IPython notebooks (especially those for
+The tests were designed to ensure that Jupyter notebooks (especially those for
 reference and documentation), are executing consistently.
 
 Each cell is taken as a test, a cell that doesn't reproduce the expected
