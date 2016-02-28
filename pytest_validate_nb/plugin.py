@@ -500,9 +500,6 @@ class IPyNbCell(pytest.Item):
             #     outs = []
             #     continue
 
-            # WE COULD ADD HERE a condition for the 'error' message type
-            # Making the test to fail
-
             """
             Now we get the reply from the piece of code executed
             and analyse the outputs
@@ -566,9 +563,9 @@ class IPyNbCell(pytest.Item):
                 #     out.prompt_number = reply['execution_count']
 
             elif msg_type == 'error':
-                for line in reply['traceback']:
-                    print(line)
-                print(reply['ename'], ':', reply['evalue'])
+                traceback = '\n' + '\n'.join(reply['traceback'])
+                raise NbCellError(self.cell_num, "Cell execution caused an exception",
+                                  self.cell.source, traceback)
 
             else:
                 print("unhandled iopub msg:", msg_type)
