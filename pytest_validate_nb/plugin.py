@@ -198,22 +198,21 @@ class IPyNbFile(pytest.File):
                 # Skip the cells that have text, headings or related stuff
                 # Only test code cells
                 if cell.cell_type == 'code':
-                    # If the code is a notebook magic cell, do not run
-                    # i.e. cell code starts with '%%'
-                    # Also ignore the cells that start with the
-                    # comment string PYTEST_VALIDATE_IGNORE_OUTPUT
-                    # NOTE: This actually skips execution, which probably isn't what we want!
-                    #       It is typically helpful to execute the cell (to make sure that at
-                    #       least the code doesn't fail) but then discard the result.
-                    if not (cell.source.startswith('%%') or
-                            cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
-                            cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
-
-                        yield IPyNbCell(self.name, self, cell_num, cell)
-
-                    else:
-                        # Skipped cells will not be counted
+                    # If the code is a notebook magic cell, do not execute it
+                    if cell.source.startswith('%%'):
                         continue
+
+                    # If a cell starts with the comment string
+                    # PYTEST_VALIDATE_IGNORE_OUTPUT then test that the cell
+                    # executes without fail but do not compare the outputs.
+                    elif (cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
+                            cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
+                        yield IPyNbCell(self.name, self, cell_num,
+                                        cell, docompare=False)
+
+                    # otherwise yield a full test (the normal case)
+                    else:
+                        yield IPyNbCell(self.name, self, cell_num, cell)
 
                 # Update 'code' cell count
                 cell_num += 1
@@ -223,7 +222,7 @@ class IPyNbFile(pytest.File):
 
 
 class IPyNbCell(pytest.Item):
-    def __init__(self, name, parent, cell_num, cell):
+    def __init__(self, name, parent, cell_num, cell, docompare=True):
         super(IPyNbCell, self).__init__(name, parent)
 
         # Store reference to parent IPynbFile so that we have access
@@ -234,6 +233,7 @@ class IPyNbCell(pytest.Item):
         self.cell = cell
 
         self.comparisons = None
+        self.docompare = docompare
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
@@ -600,8 +600,9 @@ class IPyNbCell(pytest.Item):
         # If the outputs are the same, compare them line by line
         # else:
         # for out, ref in zip(outs, self.cell.outputs):
-        if not self.compare_outputs(outs, self.cell.outputs):
-            failed = True
+        if self.docompare:
+            if not self.compare_outputs(outs, self.cell.outputs):
+                failed = True
 
         # if reply['status'] == 'error':
         # Traceback is only when an error is raised (?)
