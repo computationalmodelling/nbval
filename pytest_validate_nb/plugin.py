@@ -263,7 +263,7 @@ class IPyNbCell(pytest.Item):
                                                        'name',
                                                        'execution_count'
                                                        )):
-        self.comparisons = []
+        self.comparison_traceback = []
 
         # For every different key, we will store the outputs in a
         # single string, in a dictionary with the same keys
@@ -355,7 +355,7 @@ class IPyNbCell(pytest.Item):
 
             # Check if they have the same keys
             if key not in testing_outs.keys():
-                self.comparisons.append(bcolors.FAIL
+                self.comparison_traceback.append(bcolors.FAIL
                                         + "missing key: TESTING %s != REFERENCE %s"
                                         % (testing_outs.keys(), reference_outs.keys())
                                         + bcolors.ENDC)
@@ -369,25 +369,19 @@ class IPyNbCell(pytest.Item):
                 # print testing_outs[key]
                 # print reference_outs[key]
 
-                self.comparisons.append(bcolors.OKBLUE
+                self.comparison_traceback.append(bcolors.OKBLUE
                                         + " mismatch '%s'\n" % key
                                         + bcolors.FAIL
                                         + "<<<<<<<<<<<< Reference output from ipynb file:"
                                         + bcolors.ENDC)
-                self.comparisons.append(reference_outs[key])
-                self.comparisons.append(bcolors.FAIL
+                self.comparison_traceback.append(reference_outs[key])
+                self.comparison_traceback.append(bcolors.FAIL
                                         + '============ disagrees with newly computed (test) output:  '
                                         + bcolors.ENDC)
-                self.comparisons.append(testing_outs[str(key)])
-                self.comparisons.append(bcolors.FAIL
+                self.comparison_traceback.append(testing_outs[str(key)])
+                self.comparison_traceback.append(bcolors.FAIL
                                         + '>>>>>>>>>>>>'
                                         + bcolors.ENDC)
-
-                # self.comparisons.append('==============')
-                # self.comparisons.append('The absolute test string:')
-                # self.comparisons.append(self.sanitize(test[key]))
-                # self.comparisons.append('failed to compare with the reference:')
-                # self.comparisons.append(self.sanitize(ref[key]))
 
                 return False
         return True
@@ -616,7 +610,7 @@ class IPyNbCell(pytest.Item):
                               "Error with cell",
                               self.cell.source,
                               # Here we must put the traceback output:
-                              '\n'.join(self.comparisons))
+                              '\n'.join(self.comparison_traceback))
 
     def sanitize(self, s):
         """sanitize a string for comparison.
