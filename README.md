@@ -104,6 +104,6 @@ which we integrated and mixed with the `py.test` system.
 
 ## Authors
 
-David Cortes-Ortuno, Oliver Laslett, Maximilian Albert, Ondrej Hovorka, Hans Fangohr
+David Cortes-Ortuno, Oliver Laslett, T. Kluyver, Maximilian Albert, Ondrej Hovorka, Hans Fangohr
 
 University of Southampton, 2014 - 2015, http://www.southampton.ac.uk

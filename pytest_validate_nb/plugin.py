@@ -1,7 +1,7 @@
 """
 pytest ipython plugin modification
 
-Authors: D. Cortes, O. Laslett, T. Kluyver
+Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fanghor
 
 """
 
@@ -263,8 +263,6 @@ class IPyNbCell(pytest.Item):
                                                        'name',
                                                        'execution_count'
                                                        )):
-        self.comparison_traceback = []
-
         # For every different key, we will store the outputs in a
         # single string, in a dictionary with the same keys
         # At the end, every dictionary entry will be compared
@@ -337,21 +335,22 @@ class IPyNbCell(pytest.Item):
                         except:
                             reference_outs[key] = self.sanitize(reference[key])
 
-        # the same for the testing outputs (the cells that are boing executed)
+        # the same for the testing outputs (the cells that are being executed)
         # display_data cells were already processed! (see the execution loop)
         for testing in test:
             for key in testing.keys():
-                # For debugging:
-                # print 'TESTING:', key, '---', testing[key]
                 if key not in skip_compare:
                     try:
                         testing_outs[key] += self.sanitize(testing[key])
                     except:
                         testing_outs[key] = self.sanitize(testing[key])
 
+
+        # The traceback from the comparison will be stored here.
+        self.comparison_traceback = []
+
+
         for key in reference_outs.keys():
-            # For debugging:
-            # print 'REFERENCE:', key, '---', reference_outs[key]
 
             # Check if they have the same keys
             if key not in testing_outs.keys():
@@ -563,11 +562,7 @@ class IPyNbCell(pytest.Item):
             return s
 
         """
-        re.sub matches a regex and replaces it with another. It
-        is used to find finmag stamps (Time and date followed by INFO,
-        DEBUG, WARNING) and the whole line is replaced with a single
-        word.
-
+        re.sub matches a regex and replaces it with another.
         The regex replacements are taken from a file if the option
         is passed when py.test is called. Otherwise, the strings
         are not processed
