@@ -392,12 +392,16 @@ class IPyNbCell(pytest.Item):
 
     def runtest(self):
         """
-        Run all the cell tests in one kernel without restarting.
-        It is very common for ipython notebooks to run through assuming a
-        single kernel.
+        Run test is called by pytest for each of these nodes that are
+        collected i.e. a notebook cell. Runs all the cell tests in one
+        kernel without restarting.  It is very common for ipython
+        notebooks to run through assuming a single kernel.  The cells
+        are tested that they execute without errors and that the
+        output matches the output stored in the notebook.
+
         """
-        # Execute the code from the current cell and get the msg_id
-        # of the shell process.
+        # Execute the code in the current cell in the kernel. Returns the
+        # message id of the corresponding response from iopub.
         msg_id = self.parent.kernel.execute_cell_input(
             self.cell.source, allow_stdin=False)
 
@@ -417,14 +421,11 @@ class IPyNbCell(pytest.Item):
         # self.parent.kernel.kc.get_shell_msg(timeout=timeout)
 
         while True:
-            """
-            The messages from the cell contain information such
-            as input code, outputs generated
-            and other messages. We iterate through each message
-            until we reach the end of the cell.
-            """
+            # The iopub channel broadcasts a range of messages. We keep reading
+            # them until we find the message containing the side-effects of our
+            # code execution.
             try:
-                # Get one message at a time, per code block inside the cell
+                # Get a message from the kernel iopub channel
                 msg = self.parent.get_kernel_message(timeout=timeout)
 
             except Empty:
@@ -436,86 +437,48 @@ class IPyNbCell(pytest.Item):
                 # Just break the loop when the output is empty
                 break
 
-            """
-            Now that we have the output from a piece of code
-            inside the cell,
-            we want to compare the outputs of the messages
-            to a reference output (the ones that are present before
-            the notebook was executed)
-            """
 
-            # print msg
-
-            # Firstly, get the msg type from the cell to know if
-            # the output comes from a code
-            # It seems that the type 'stream' is irrelevant
+            # now we must handle the message by checking the type and reply
+            # info and we store the output of the cell in a notebook node object
             msg_type = msg['msg_type']
             reply = msg['content']
+            out = NotebookNode(output_type=msg_type)
 
-            # REF:
-            # execute_input: To let all frontends know what code is
-            # being executed at any given time, these messages contain a
-            # re-broadcast of the code portion of an execute_request,
-            # along with the execution_count.
+            # When the kernel starts to execute code, it will enter the 'busy'
+            # state and when it finishes, it will enter the 'idle' state.
+            # The kernel will publish state 'starting' exactly
+            # once at process startup.
             if msg_type == 'status':
                 if reply['execution_state'] == 'idle':
                     break
                 else:
                     continue
+
+            # execute_input: To let all frontends know what code is
+            # being executed at any given time, these messages contain a
+            # re-broadcast of the code portion of an execute_request,
+            # along with the execution_count.
             elif msg_type == 'execute_input':
                 continue
+
+            # com? execute reply?
             elif msg_type.startswith('comm'):
                 continue
             elif msg_type == 'execute_reply':
-                # print msg
                 continue
-            # If there is no more output, continue with the executions
-            # (it will break if it is empty, with the previous statements)
-            #
-            # REF:
+
             # This message type is used to clear the output that is
             # visible on the frontend
             # elif msg_type == 'clear_output':
             #     outs = []
             #     continue
 
-            # I added the msg_type 'idle' condition (when the cell stops)
-            # so we get a complete cell output
-            # REF:
-            # When the kernel starts to execute code, it will enter the 'busy'
-            # state and when it finishes, it will enter the 'idle' state.
-            # The kernel will publish state 'starting' exactly
-            # once at process startup.
+
             # elif (msg_type == 'clear_output'
             #       and msg_type['execution_state'] == 'idle'):
             #     outs = []
             #     continue
 
-            """
-            Now we get the reply from the piece of code executed
-            and analyse the outputs
-            """
-            reply = msg['content']
-
-            # Debugging
-            if msg_type == 'stream' and reply['text'].startswith('PTVNB-DBG:'):
-                print(reply['text'])
-                continue
-
-            out = NotebookNode(output_type=msg_type)
-
-            # print '---------------------------- CELL ----------------------'
-            # print msg_type
-            # print reply
-            # print '---------------------------- CELL ORIGINAL----------------'
-            # print self.cell.outputs
-
-            # Now check what type of output it is
-            if msg_type == 'stream':
-                out.stream = reply['name']
-                out.text = reply['text']
-
-            # REF:
             # 'execute_result' is equivalent to a display_data message.
             # The object being displayed is passed to the display
             # hook, i.e. the *result* of the execution.
@@ -531,12 +494,6 @@ class IPyNbCell(pytest.Item):
             # as height and width of the image (CHECK the documentation)
             # Thus we iterate through the keys (mimes) 'data' sub-dictionary
             # to obtain the 'text' and 'image/png' information
-            #
-            # We NO longer replace 'image/png' by 'png' since the last version
-            # of the notebook format is more consistent. We also DO NOT
-            # replace any .xml string, it's not neccesary
-
-            # elif msg_type in ('display_data', 'execute_result'):
             elif msg_type in ('display_data', 'execute_result'):
                 out['metadata'] = reply['metadata']
                 for mime, data in six.iteritems(reply['data']):
@@ -549,64 +506,48 @@ class IPyNbCell(pytest.Item):
                 # plain/text, image/png, execution_count, etc
                 # We coul use a mime types list for this (MAYBE)
                     setattr(out, mime, data)
+                outs.append(out)
 
                 # if msg_type == 'execute_result':
                 #     out.prompt_number = reply['execution_count']
 
+
+            # if the message is a stream then we store the output
+            elif msg_type == 'stream':
+                out.stream = reply['name']
+                out.text = reply['text']
+                outs.append(out)
+
+
+            # if the message type is an error then an error has occurred during
+            # cell execution. Therefore raise a cell error and pass the
+            # traceback information.
             elif msg_type == 'error':
                 traceback = '\n' + '\n'.join(reply['traceback'])
                 raise NbCellError(self.cell_num, "Cell execution caused an exception",
                                   self.cell.source, traceback)
 
+            # any other message type is not expected
+            # should this raise an error?
             else:
                 print("unhandled iopub msg:", msg_type)
 
-            outs.append(out)
-
-        """
-        This message is the last message of the cell, which contains no output.
-        It only indicates whether the entire cell ran successfully or if there
-        was an error.
-        """
-        # reply = msg['content']
-
-        failed = False
-
-        # THIS COMPARISON IS ONLY WHEN THE OUTPUT DICTIONARIES
-        # ARE DIFFERENT, WHICH IS A DIFFERENT ERROR, not
-        # from the output in the notebook
-        #
-        # SINCE WE SANITIZE AND COMPARE, IF THERE ARE DIFFERENT
-        # NUMBER OF LINES, this error will be reported
-        #
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
         # if len(outs) != len(self.cell.outputs):
         #     self.diff_number_outputs(outs, self.cell.outputs)
         #     failed = True
-
-        # If the outputs are the same, compare them line by line
-        # else:
-        # for out, ref in zip(outs, self.cell.outputs):
+        failed = False
         if self.docompare:
             if not self.compare_outputs(outs, self.cell.outputs):
                 failed = True
 
-        # if reply['status'] == 'error':
-        # Traceback is only when an error is raised (?)
 
-        # We usually get an exception because traceback is not defined
-        if failed:  # Use this to make the test fail
-            """
-            The pytest exception will be raised if there are any
-            errors in the notebook cells. Now we check that
-            the outputs produced from running each cell
-            matches the outputs in the existing notebook.
-            This code is taken from [REF].
-            """
+        # If the comparison failed then we raise an exception.
+        if failed:
+            # The traceback containing the difference in the outputs is
+            # stored in the variable comparison_traceback
             raise NbCellError(self.cell_num,
-                              # Still needs correction. We could
-                              # add a description
                               "Error with cell",
                               self.cell.source,
                               # Here we must put the traceback output:
