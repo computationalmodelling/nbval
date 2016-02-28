@@ -193,10 +193,7 @@ class IPyNbFile(pytest.File):
             # Start the cell count
             cell_num = 0
 
-            # Worksheets are NOT used anymore::
-            # Currently there is only 1 worksheet (it seems in newer versions
-            # of IPython, they are going to get rid of this option)
-            # For every worksheet, read every cell associated to it
+            # Iterate over the cells in the notebook
             for cell in self.nb.cells:
                 # Skip the cells that have text, headings or related stuff
                 # Only test code cells
