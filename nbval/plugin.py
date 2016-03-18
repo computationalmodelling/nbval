@@ -92,13 +92,16 @@ class RunningKernel(object):
                                   stderr=open(os.devnull, 'w'))
 
 
-    def get_message(self, timeout=None):
+    def get_message(self, stream, timeout=None):
         """
         Function is used to get a message from the iopub channel.
         Timeout is None by default
         When timeout is reached
         """
-        return self.kc.get_iopub_msg(timeout=timeout)
+        if stream == 'iopub':
+            return self.kc.get_iopub_msg(timeout=timeout)
+        elif stream == 'shell':
+            return self.kc.get_shell_msg(timeout=timeout)
 
     def execute_cell_input(self, cell_input, allow_stdin=None):
         """
@@ -174,11 +177,11 @@ class IPyNbFile(pytest.File):
         else:
             return []
 
-    def get_kernel_message(self, timeout=None):
+    def get_kernel_message(self, timeout=None, stream='iopub'):
         """
         Gets a message from the iopub channel of the notebook kernel.
         """
-        return self.kernel.get_message(timeout=timeout)
+        return self.kernel.get_message(stream, timeout=timeout)
 
     # Read through the specified notebooks and load the data
     # (which is in json format)
@@ -401,21 +404,32 @@ class IPyNbCell(pytest.Item):
         msg_id = self.parent.kernel.execute_cell_input(
             self.cell.source, allow_stdin=False)
 
-        # Time for the reply of the cell execution
-        # (maximum time, it can finish before, we could make a timeout
-        # exception in the future)
+        # Timeout for the cell execution
+        # after code is sent for execution, the kernel sends a message on
+        # the shell channel. Timeout if no message received.
         timeout = 2000
+
+        # Poll the shell channel to get a message
+        while True:
+            try:
+                msg = self.parent.get_kernel_message(stream='shell',
+                                                     timeout=timeout)
+            except Empty:
+                raise NbCellError("Timeout of %d seconds exceeded"
+                                  " executing cell: %s" (timeout,
+                                                         self.cell.input))
+
+            # Is this the message we are waiting for?
+            if msg['parent_header'].get('msg_id') == msg_id:
+                break
+            else:
+                continue
 
         # This list stores the output information for the entire cell
         outs = []
 
-        # Wait for the execution reply (we can see this in the msg_type)
-        # This execution produces a dictionary where a status string can be
-        # obtained: 'ok' OR 'error' OR 'abort'
-        # We can also get how many cells have been executed
-        # until here, with the 'execution_count' entry
-        # self.parent.kernel.kc.get_shell_msg(timeout=timeout)
-
+        # Now get the outputs from the iopub channel, need smaller timeout
+        timeout = 5
         while True:
             # The iopub channel broadcasts a range of messages. We keep reading
             # them until we find the message containing the side-effects of our
@@ -427,11 +441,9 @@ class IPyNbCell(pytest.Item):
             except Empty:
                 # This is not working: ! The code will not be checked
                 # if the time is out (when the cell stops to be executed?)
-                # raise NbCellError("Timeout of %d seconds exceeded"
-                #                      " executing cell: %s" (timeout,
-                #                                             self.cell.input))
-                # Just break the loop when the output is empty
-                break
+                raise NbCellError("Timeout of %d seconds exceeded"
+                                  " waiting for output.")
+
 
 
             # now we must handle the message by checking the type and reply
