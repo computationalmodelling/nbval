@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="nbval",
-    version="0.2",
+    version="0.3",
     author="Laslett, Cortes, Kluyver, Fangohr",
     packages = ['nbval'],
 
