@@ -50,22 +50,22 @@ and how the system works, can be found here
 http://ipython.org/ipython-doc/stable/development/messaging.html
 
 ## Execution
-To execute this plugin, you need to execute `py.test` with the `ipynb` flag
+To execute this plugin, you need to execute `py.test` with the `nbval` flag
 to differentiate the testing from the usual python files:
 
-    py.test --ipynb
+    py.test --nbval
 
 This will execute all the `.ipynb` files in the current folder. Alternatively,
 it can be executed:
 
-    py.test --ipynb my_notebook.ipynb
+    py.test --nbval my_notebook.ipynb
 
 for an specific notebook.
 If the output lines are going to be sanitized, an extra flag, `--sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
 
-    py.test --ipynb my_notebook.ipynb --sanitize-with path/to/my_sanitize_file
+    py.test --nbval my_notebook.ipynb --sanitize-with path/to/my_sanitize_file
 
 where `my_sanitize_file` has the following structure.
 

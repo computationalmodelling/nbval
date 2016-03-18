@@ -43,11 +43,11 @@ class NbCellError(Exception):
 
 def pytest_addoption(parser):
     """
-    Adds the --ipynb option flag for py.test.
+    Adds the --nbval option flag for py.test.
 
     Adds an optional flag to pass a config file with regex
     expressions to sanitise the outputs
-    Only will work if the --ipynb flag is present
+    Only will work if the --nbval flag is present
 
     This is called by the pytest API
     """
@@ -58,14 +58,14 @@ def pytest_addoption(parser):
     group.addoption('--sanitize-with',
                     help='File with regex expressions to sanitize '
                          'the outputs. This option only works when '
-                         'the --ipynb flag is passed to py.test')
+                         'the --nbval flag is passed to py.test')
 
 
 def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
-    if path.fnmatch("*.ipynb") and parent.config.option.ipynb:
+    if path.fnmatch("*.ipynb") and parent.config.option.nbval:
         return IPyNbFile(path, parent)
 
 
@@ -204,7 +204,7 @@ class IPyNbFile(pytest.File):
                     # executes without fail but do not compare the outputs.
                     if (cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
                         cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
-                        yield IPyNbCell(self.name, self, cell_num,
+                        yield IPyNbCell(self.name + str(cell_num), self, cell_num,
                                         cell, docompare=False)
 
                     # otherwise yield a full test (the normal case)
