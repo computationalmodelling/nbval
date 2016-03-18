@@ -452,6 +452,10 @@ class IPyNbCell(pytest.Item):
             reply = msg['content']
             out = NotebookNode(output_type=msg_type)
 
+            # Is the iopub message related to this cell execution?
+            if msg['parent_header'].get('msg_id') != msg_id:
+                continue
+
             # When the kernel starts to execute code, it will enter the 'busy'
             # state and when it finishes, it will enter the 'idle' state.
             # The kernel will publish state 'starting' exactly
