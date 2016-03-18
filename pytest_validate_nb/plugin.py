@@ -52,7 +52,7 @@ def pytest_addoption(parser):
     This is called by the pytest API
     """
     group = parser.getgroup("general")
-    group.addoption('--ipynb', action='store_true',
+    group.addoption('--nbval', action='store_true',
                     help="Validate IPython notebooks")
 
     group.addoption('--sanitize-with',
