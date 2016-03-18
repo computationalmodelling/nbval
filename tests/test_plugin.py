@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 import textwrap
-from pytest_validate_nb.plugin import *
+from nbval.plugin import *
 
 
 def test_get_sanitize_patterns():
