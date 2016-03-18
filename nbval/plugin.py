@@ -207,12 +207,12 @@ class IPyNbFile(pytest.File):
                     # executes without fail but do not compare the outputs.
                     if (cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
                         cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
-                        yield IPyNbCell(self.name + str(cell_num), self, cell_num,
+                        yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
                                         cell, docompare=False)
 
                     # otherwise yield a full test (the normal case)
                     else:
-                        yield IPyNbCell(self.name, self, cell_num, cell)
+                        yield IPyNbCell('Cell ' + str(cell_num), self, cell_num, cell)
 
                 # Update 'code' cell count
                 cell_num += 1
