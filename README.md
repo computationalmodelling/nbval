@@ -16,13 +16,17 @@ output will fail.
 See `documentation.ipynb` for the full documentation.
 
 ## Installation
-After cloning this repository, the plugin is installed doing
+Available on PyPi:
 
-    sudo pip install .
+    pip install nbval
 
-from the main directory. It can be easily removed with:
+or install the latest version from cloning the repository and running:
 
-    sudo pip uninstall pytest_validate_nb
+    pip install .
+
+from the main directory. To uninstall:
+
+    pip uninstall nbval
 
 
 ## How it works
