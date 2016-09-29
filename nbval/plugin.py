@@ -25,7 +25,8 @@ except:
     from queue import Empty
 
 # for reading notebook files
-from nbformat import reads, NotebookNode
+import nbformat
+from nbformat import NotebookNode
 
 # define colours for pretty outputs
 class bcolors:
@@ -190,32 +191,31 @@ class IPyNbFile(pytest.File):
         The collect function is required by pytest and is used to yield pytest
         Item objects. We specify an Item for each code cell in the notebook.
         """
-        with self.fspath.open() as f:
-            self.nb = reads(f.read(), 4)
+        self.nb = nbformat.read(self.fspath, as_version=4)
 
-            # Start the cell count
-            cell_num = 0
+        # Start the cell count
+        cell_num = 0
 
-            # Iterate over the cells in the notebook
-            for cell in self.nb.cells:
-                # Skip the cells that have text, headings or related stuff
-                # Only test code cells
-                if cell.cell_type == 'code':
+        # Iterate over the cells in the notebook
+        for cell in self.nb.cells:
+            # Skip the cells that have text, headings or related stuff
+            # Only test code cells
+            if cell.cell_type == 'code':
 
-                    # If a cell starts with the comment string
-                    # PYTEST_VALIDATE_IGNORE_OUTPUT then test that the cell
-                    # executes without fail but do not compare the outputs.
-                    if (cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
-                        cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
-                        yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                        cell, docompare=False)
+                # If a cell starts with the comment string
+                # PYTEST_VALIDATE_IGNORE_OUTPUT then test that the cell
+                # executes without fail but do not compare the outputs.
+                if (cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
+                    cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
+                    yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
+                                    cell, docompare=False)
 
-                    # otherwise yield a full test (the normal case)
-                    else:
-                        yield IPyNbCell('Cell ' + str(cell_num), self, cell_num, cell)
+                # otherwise yield a full test (the normal case)
+                else:
+                    yield IPyNbCell('Cell ' + str(cell_num), self, cell_num, cell)
 
-                # Update 'code' cell count
-                cell_num += 1
+            # Update 'code' cell count
+            cell_num += 1
 
     def teardown(self):
         self.kernel.stop()
