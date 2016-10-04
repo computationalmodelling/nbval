@@ -191,7 +191,7 @@ class IPyNbFile(pytest.File):
         The collect function is required by pytest and is used to yield pytest
         Item objects. We specify an Item for each code cell in the notebook.
         """
-        self.nb = nbformat.read(self.fspath, as_version=4)
+        self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
         cell_num = 0
