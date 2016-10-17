@@ -201,15 +201,21 @@ class IPyNbFile(pytest.File):
             # Skip the cells that have text, headings or related stuff
             # Only test code cells
             if cell.cell_type == 'code':
-
                 # If a cell starts with the comment string
                 # PYTEST_VALIDATE_IGNORE_OUTPUT then test that the cell
                 # executes without fail but do not compare the outputs.
-                if (cell.source.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
-                    cell.source.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
+                #
+                # Here we check the first three lines; this is necessary because if the
+                # first two lines are cell magics, we still need to ignore the output.
+                ignore_output = False
+                for line in cell.source.split('\n')[:3]:
+                    if (line.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
+                        line.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
+                        ignore_output = True
+
+                if ignore_output:
                     yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
                                     cell, docompare=False)
-
                 # otherwise yield a full test (the normal case)
                 else:
                     yield IPyNbCell('Cell ' + str(cell_num), self, cell_num, cell)
