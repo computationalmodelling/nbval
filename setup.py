@@ -2,8 +2,8 @@ from setuptools import setup
 
 setup(
     name="nbval",
-    version="0.3.3",
-    author="Laslett, Cortes, Kluyver, Fangohr",
+    version="0.3.4",
+    author="Laslett, Cortes, Kluyver, Pepper, Fangohr",
     packages = ['nbval'],
 
     # the following makes a plugin available to pytest
