@@ -135,6 +135,23 @@ class RunningKernel(object):
         del self.km
 
 
+comment_markers = {
+    'PYTEST_VALIDATE_IGNORE_OUTPUT': 'ignore',  # For backwards compatibility
+    'NBVAL_IGNORE_OUTPUT': 'ignore',
+    'NBVAL_CHECK_OUTPUT': 'check',
+}
+
+def find_comment_marker(cellsource):
+    """Look through the cell source for comments which affect nbval's behaviour
+    """
+    for line in cellsource.splitlines():
+        line = line.strip()
+        if line.startswith('#'):
+            comment = line.lstrip('#').strip()
+            if comment in comment_markers:
+                return comment_markers[comment]
+
+
 class IPyNbFile(pytest.File):
     """
     This class represents a pytest collector object.
@@ -142,9 +159,10 @@ class IPyNbFile(pytest.File):
     in the notebook for testing.
     yields pytest items that are required by pytest.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, compare_outputs=True, **kwargs):
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
+        self.compare_outputs = compare_outputs
 
     def setup(self):
         """
@@ -201,24 +219,17 @@ class IPyNbFile(pytest.File):
             # Skip the cells that have text, headings or related stuff
             # Only test code cells
             if cell.cell_type == 'code':
-                # If a cell starts with the comment string
-                # PYTEST_VALIDATE_IGNORE_OUTPUT then test that the cell
-                # executes without fail but do not compare the outputs.
-                #
-                # Here we check the first three lines; this is necessary because if the
-                # first two lines are cell magics, we still need to ignore the output.
-                ignore_output = False
-                for line in cell.source.split('\n')[:3]:
-                    if (line.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
-                        line.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
-                        ignore_output = True
-
-                if ignore_output:
-                    yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                    cell, docompare=False)
-                # otherwise yield a full test (the normal case)
+                # The cell may contain a comment indicating that its output
+                # should be checked or ignored. If it doesn't, use the default
+                # behaviour. The --nbval option checks unmarked cells.
+                comment_indication = find_comment_marker(cell.source)
+                if comment_indication is None:
+                    compare_outputs = self.compare_outputs
                 else:
-                    yield IPyNbCell('Cell ' + str(cell_num), self, cell_num, cell)
+                    compare_outputs = (comment_indication == 'check')
+
+                yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
+                                cell, docompare=compare_outputs)
 
             # Update 'code' cell count
             cell_num += 1
