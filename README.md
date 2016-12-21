@@ -59,12 +59,17 @@ to differentiate the testing from the usual python files:
 
     py.test --nbval
 
-This will execute all the `.ipynb` files in the current folder. Alternatively,
-it can be executed:
+You can also specify `--nbval-lax`, which runs notebooks and checks for
+errors, but only compares the outputs of cells with a `#NBVAL_CHECK_OUTPUT`
+marker comment.
+
+    py.test --nbval-lax
+
+The commands above will execute all the `.ipynb` files in the current folder.
+Alternatively, you can execute a specific notebook:
 
     py.test --nbval my_notebook.ipynb
 
-for an specific notebook.
 If the output lines are going to be sanitized, an extra flag, `--sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
