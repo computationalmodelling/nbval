@@ -165,7 +165,8 @@ class IPyNbFile(pytest.File):
     in the notebook for testing.
     yields pytest items that are required by pytest.
     """
-    def __init__(self, *args, compare_outputs=True, **kwargs):
+    def __init__(self, *args, **kwargs):
+        compare_outputs = kwargs.pop('compare_outputs', True)
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
         self.compare_outputs = compare_outputs
