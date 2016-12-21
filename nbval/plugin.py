@@ -54,7 +54,11 @@ def pytest_addoption(parser):
     """
     group = parser.getgroup("general")
     group.addoption('--nbval', action='store_true',
-                    help="Validate IPython notebooks")
+                    help="Validate Jupyter notebooks")
+
+    group.addoption('--nbval-lax', action='store_true',
+                    help="Run Jupyter notebooks, only validating output on "
+                         "cells marked with # NBVAL_CHECK_OUTPUT")
 
     group.addoption('--sanitize-with',
                     help='File with regex expressions to sanitize '
@@ -66,9 +70,11 @@ def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
-    if path.fnmatch("*.ipynb") and parent.config.option.nbval:
-        return IPyNbFile(path, parent)
-
+    if path.fnmatch("*.ipynb"):
+        if parent.config.option.nbval:
+            return IPyNbFile(path, parent)
+        elif parent.config.option.nbval_lax:
+            return IPyNbFile(path, parent, compare_outputs=False)
 
 
 class RunningKernel(object):
