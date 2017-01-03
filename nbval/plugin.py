@@ -511,7 +511,7 @@ class IPyNbCell(pytest.Item):
             # 'execution_count' number which does not seems useful
             # (we will filter it in the sanitize function)
             #
-            # When the reply is display_data or execute_count,
+            # When the reply is display_data or execute_result,
             # the dictionary contains
             # a 'data' sub-dictionary with the 'text' AND the 'image/png'
             # picture (in hexadecimal). There is also a 'metadata' entry
