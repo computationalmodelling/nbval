@@ -259,6 +259,11 @@ class IPyNbCell(pytest.Item):
         self.metadata = metadata
         self.docompare = docompare
 
+        extra_sanitizers = self.metadata.get('extra_sanitizers', '')
+        self.sanitize_patterns = OrderedDict(
+            get_sanitize_patterns(extra_sanitizers))
+
+
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
         ***************************************************** """
@@ -613,9 +618,7 @@ class IPyNbCell(pytest.Item):
         for pattern in six.iteritems(self.parent.sanitize_patterns):
             yield pattern
         # Also include cell-specific regex
-        own_raw = self.metadata.get('extra_sanitizers', '')
-        own_patterns = OrderedDict(get_sanitize_patterns(own_raw))
-        for pattern in six.iteritems(own_patterns):
+        for pattern in six.iteritems(self.sanitize_patterns):
             yield pattern
 
 
