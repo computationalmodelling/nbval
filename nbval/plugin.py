@@ -614,13 +614,12 @@ class IPyNbCell(pytest.Item):
         return s
 
     def _get_santitize_patterns(self):
-        # Yield patterns from parent
-        for pattern in six.iteritems(self.parent.sanitize_patterns):
-            yield pattern
-        # Also include cell-specific regex
+        # Yield cell-specific patterns first
         for pattern in six.iteritems(self.sanitize_patterns):
             yield pattern
-
+        # Then yield patterns from parent
+        for pattern in six.iteritems(self.parent.sanitize_patterns):
+            yield pattern
 
 
 def get_sanitize_patterns(string):
