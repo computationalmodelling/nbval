@@ -591,9 +591,6 @@ class IPyNbCell(pytest.Item):
 
     def sanitize(self, s):
         """sanitize a string for comparison.
-
-        fix universal newlines, strip trailing newlines,
-        and normalize likely random values (memory addresses and UUIDs)
         """
         if not isinstance(s, six.string_types):
             return s
