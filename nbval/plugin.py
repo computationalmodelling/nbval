@@ -226,16 +226,15 @@ class IPyNbFile(pytest.File):
             # Skip the cells that have text, headings or related stuff
             # Only test code cells
             if cell.cell_type == 'code':
+                metadata = cell.metadata.get('nbval', {})
                 # The cell may contain a comment indicating that its output
                 # should be checked or ignored. If it doesn't, use the default
                 # behaviour. The --nbval option checks unmarked cells.
                 comment_indication = find_comment_marker(cell.source)
                 if comment_indication is None:
-                    compare_outputs = self.compare_outputs
+                    compare_outputs = metadata.get('compare_outputs', self.compare_outputs)
                 else:
                     compare_outputs = (comment_indication == 'check')
-
-                metadata = cell.metadata.get('nbval', {})
 
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
                                 cell, metadata=metadata,
@@ -258,7 +257,7 @@ class IPyNbCell(pytest.Item):
         self.cell_num = cell_num
         self.cell = cell
         self.metadata = metadata
-        self.docompare = metadata.get('compare_outputs', docompare)
+        self.docompare = docompare
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
