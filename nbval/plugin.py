@@ -235,8 +235,11 @@ class IPyNbFile(pytest.File):
                 else:
                     compare_outputs = (comment_indication == 'check')
 
+                metadata = cell.metadata.get('nbval', {})
+
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                cell, docompare=compare_outputs)
+                                cell, metadata=metadata,
+                                docompare=compare_outputs)
 
             # Update 'code' cell count
             cell_num += 1
@@ -246,7 +249,7 @@ class IPyNbFile(pytest.File):
 
 
 class IPyNbCell(pytest.Item):
-    def __init__(self, name, parent, cell_num, cell, docompare=True):
+    def __init__(self, name, parent, cell_num, cell, metadata, docompare):
         super(IPyNbCell, self).__init__(name, parent)
 
         # Store reference to parent IPynbFile so that we have access
@@ -254,7 +257,8 @@ class IPyNbCell(pytest.Item):
         self.parent = parent
         self.cell_num = cell_num
         self.cell = cell
-        self.docompare = docompare
+        self.metadata = metadata
+        self.docompare = metadata.get('compare_outputs', docompare)
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
