@@ -605,9 +605,20 @@ class IPyNbCell(pytest.Item):
         is passed when py.test is called. Otherwise, the strings
         are not processed
         """
-        for regex, replace in six.iteritems(self.parent.sanitize_patterns):
+        for regex, replace in self._get_santitize_patterns():
             s = re.sub(regex, replace, s)
         return s
+
+    def _get_santitize_patterns(self):
+        # Yield patterns from parent
+        for pattern in six.iteritems(self.parent.sanitize_patterns):
+            yield pattern
+        # Also include cell-specific regex
+        own_raw = self.metadata.get('extra_sanitizers', '')
+        own_patterns = OrderedDict(get_sanitize_patterns(own_raw))
+        for pattern in six.iteritems(own_patterns):
+            yield pattern
+
 
 
 def get_sanitize_patterns(string):
