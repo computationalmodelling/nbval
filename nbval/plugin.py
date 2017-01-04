@@ -88,15 +88,16 @@ class RunningKernel(object):
     this class.
 
     """
-    def __init__(self):
+    def __init__(self, kernel_name):
         """
         Initialise a new kernel
         specfiy that matplotlib is inline and connect the stderr.
         Stores the active kernel process and its manager.
         """
-        self.km, self.kc = \
-                start_new_kernel(extra_arguments=['--matplotlib=inline'],
-                                  stderr=open(os.devnull, 'w'))
+
+        self.km, self.kc = start_new_kernel(
+            kernel_name=kernel_name,
+            stderr=open(os.devnull, 'w'))
 
 
     def get_message(self, stream, timeout=None):
@@ -176,7 +177,9 @@ class IPyNbFile(pytest.File):
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-        self.kernel = RunningKernel()
+
+        kernel_name = self.nb.metadata.get('kernelspec', {}).get('name', 'python')
+        self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
 
@@ -216,6 +219,7 @@ class IPyNbFile(pytest.File):
         The collect function is required by pytest and is used to yield pytest
         Item objects. We specify an Item for each code cell in the notebook.
         """
+
         self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
