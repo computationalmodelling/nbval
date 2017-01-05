@@ -203,6 +203,7 @@ class IPyNbCell(pytest.Item):
         self.cell_num = cell_num
         self.cell = cell
         self.docompare = docompare
+        self.test_outputs = None
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
@@ -225,7 +226,6 @@ class IPyNbCell(pytest.Item):
         return self.fspath, 0, description
 
     def compare_outputs(self, test, ref, skip_compare=('metadata',
-                                                       'image/png',
                                                        'traceback',
                                                        'text/latex',
                                                        'prompt_number',
@@ -312,10 +312,19 @@ class IPyNbCell(pytest.Item):
         for testing in test:
             for key in testing.keys():
                 if key not in skip_compare:
-                    try:
-                        testing_outs[key] += self.sanitize(testing[key])
-                    except:
-                        testing_outs[key] = self.sanitize(testing[key])
+                    if key == 'data':
+                        for data_key in testing[key].keys():
+                            # Filter the keys in the SUB-dictionary again
+                            if data_key not in skip_compare:
+                                try:
+                                    testing_outs[data_key] += self.sanitize(testing[key][data_key])
+                                except:
+                                    testing_outs[data_key] = self.sanitize(testing[key][data_key])
+                    else:
+                        try:
+                            testing_outs[key] += self.sanitize(testing[key])
+                        except:
+                            testing_outs[key] = self.sanitize(testing[key])
 
 
         # The traceback from the comparison will be stored here.
@@ -480,20 +489,21 @@ class IPyNbCell(pytest.Item):
             # to obtain the 'text' and 'image/png' information
             elif msg_type in ('display_data', 'execute_result'):
                 out['metadata'] = reply['metadata']
+                out['data'] = {}
                 for mime, data in six.iteritems(reply['data']):
-                # This could be useful for reference or backward compatibility
-                #     attr = mime.split('/')[-1].lower()
-                #     attr = attr.replace('+xml', '').replace('plain', 'text')
-                #     setattr(out, attr, data)
+                    # This could be useful for reference or backward compatibility
+                    #     attr = mime.split('/')[-1].lower()
+                    #     attr = attr.replace('+xml', '').replace('plain', 'text')
+                    #     setattr(out, attr, data)
 
-                # Return the relevant entries from data:
-                # plain/text, image/png, execution_count, etc
-                # We coul use a mime types list for this (MAYBE)
-                    setattr(out, mime, data)
+                    # Return the relevant entries from data:
+                    # plain/text, image/png, execution_count, etc
+                    # We could use a mime types list for this (MAYBE)
+                    out.data[mime] = data
                 outs.append(out)
 
-                # if msg_type == 'execute_result':
-                #     out.prompt_number = reply['execution_count']
+                if msg_type == 'execute_result':
+                     out.execution_count = reply['execution_count']
 
 
             # if the message is a stream then we store the output
@@ -516,6 +526,9 @@ class IPyNbCell(pytest.Item):
             else:
                 print("unhandled iopub msg:", msg_type)
 
+        # TODO: Only store if comparing with nbdime, to save on memory usage
+        self.test_outputs = outs
+
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
         # if len(outs) != len(self.cell.outputs):
@@ -536,6 +549,41 @@ class IPyNbCell(pytest.Item):
                               self.cell.source,
                               # Here we must put the traceback output:
                               '\n'.join(self.comparison_traceback))
+
+    def sanitize_outputs(self, outputs, skip_sanitize=('metadata',
+                                                       'traceback',
+                                                       'latex',
+                                                       'prompt_number',
+                                                       'stdout',
+                                                       'stream',
+                                                       'output_type',
+                                                       'name',
+                                                       'execution_count'
+                                                       )):
+        sanitized_outputs = []
+        for output in outputs:
+            sanitized = {}
+            for key in output.keys():
+                if key in skip_sanitize:
+                    sanitized[key] = output[key]
+                else:
+                    if key == 'data':
+                        sanitized[key] = {}
+                        for data_key in output[key].keys():
+                            # Filter the keys in the SUB-dictionary again
+                            if data_key in skip_sanitize:
+                                sanitized[key][data_key] = output[key][data_key]
+                            else:
+                                sanitized[key][data_key] = self.sanitize(output[key][data_key])
+
+                    # Otherwise, just create a normal dictionary entry from
+                    # one of the keys of the dictionary
+                    else:
+                        # Create the dictionary entries on the fly, from the
+                        # existing ones to be compared
+                        sanitized[key] = self.sanitize(output[key])
+            sanitized_outputs.append(nbformat.from_dict(sanitized))
+        return sanitized_outputs
 
     def sanitize(self, s):
         """sanitize a string for comparison.
