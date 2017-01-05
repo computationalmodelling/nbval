@@ -564,7 +564,7 @@ class IPyNbCell(pytest.Item):
             # The traceback containing the difference in the outputs is
             # stored in the variable comparison_traceback
             raise NbCellError(self.cell_num,
-                              "Error with cell",
+                              "Cell outputs differ",
                               self.cell.source,
                               # Here we must put the traceback output:
                               '\n'.join(self.comparison_traceback))
