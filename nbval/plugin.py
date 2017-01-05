@@ -9,6 +9,7 @@ Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 import pytest
 import sys
 import re
+import hashlib
 from collections import OrderedDict
 
 # for python 3 compatibility
@@ -368,11 +369,11 @@ class IPyNbCell(pytest.Item):
                                         + bcolors.FAIL
                                         + "<<<<<<<<<<<< Reference output from ipynb file:"
                                         + bcolors.ENDC)
-                self.comparison_traceback.append(reference_outs[key])
+                self.comparison_traceback.append(_trim_base64(reference_outs[key]))
                 self.comparison_traceback.append(bcolors.FAIL
                                         + '============ disagrees with newly computed (test) output:  '
                                         + bcolors.ENDC)
-                self.comparison_traceback.append(testing_outs[str(key)])
+                self.comparison_traceback.append(_trim_base64(testing_outs[str(key)]))
                 self.comparison_traceback.append(bcolors.FAIL
                                         + '>>>>>>>>>>>>'
                                         + bcolors.ENDC)
@@ -635,3 +636,15 @@ def get_sanitize_patterns(string):
     return re.findall('^regex: (.*)$\n^replace: (.*)$',
                          string,
                          flags=re.MULTILINE)
+
+def hash_string(s):
+    return hashlib.md5(s.encode("utf8")).hexdigest()
+
+_base64 = re.compile(r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$', re.MULTILINE | re.UNICODE)
+
+def _trim_base64(s):
+    """Trim and hash base64 strings"""
+    if len(s) > 64 and _base64.match(s.replace('\n', '')):
+        h = hash_string(s)
+        s = '%s...<snip base64, md5=%s...>' % (s[:8], h[:16])
+    return s
