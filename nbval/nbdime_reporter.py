@@ -23,6 +23,7 @@ from nbdime.webapp.nbdiffweb import run_server, browse
 
 from .plugin import IPyNbCell
 
+nbdime.log.set_nbdime_log_level('ERROR')
 
 _re_nbval_nodeid = re.compile('.*\.ipynb::Cell \d+')
 
