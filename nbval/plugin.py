@@ -423,6 +423,8 @@ class IPyNbCell(pytest.Item):
 
         # This list stores the output information for the entire cell
         outs = []
+        # TODO: Only store if comparing with nbdime, to save on memory usage
+        self.test_outputs = outs
 
         # Now get the outputs from the iopub channel, need smaller timeout
         timeout = 5
@@ -532,6 +534,11 @@ class IPyNbCell(pytest.Item):
             # cell execution. Therefore raise a cell error and pass the
             # traceback information.
             elif msg_type == 'error':
+                # Store error in output first
+                out['ename'] = reply['ename']
+                out['evalue'] = reply['evalue']
+                out['traceback'] = reply['traceback']
+                outs.append(out)
                 traceback = '\n' + '\n'.join(reply['traceback'])
                 raise NbCellError(self.cell_num, "Cell execution caused an exception",
                                   self.cell.source, traceback)
@@ -540,9 +547,6 @@ class IPyNbCell(pytest.Item):
             # should this raise an error?
             else:
                 print("unhandled iopub msg:", msg_type)
-
-        # TODO: Only store if comparing with nbdime, to save on memory usage
-        self.test_outputs = outs
 
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails

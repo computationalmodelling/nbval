@@ -21,7 +21,7 @@ import nbformat
 import nbdime
 from nbdime.webapp.nbdiffweb import run_server, browse
 
-from .plugin import IPyNbCell
+from .plugin import IPyNbCell, bcolors
 
 nbdime.log.set_nbdime_log_level('ERROR')
 
@@ -41,14 +41,17 @@ class NbdimeReporter:
 
         self.stats = {}
 
+    # ---- These functions store captured test items and reports ----
+
     def pytest_runtest_logreport(self, report):
+        """Store all test reports for evaluation on finish"""
         rep = report
         res = self.config.hook.pytest_report_teststatus(report=rep)
         cat, letter, word = res
         self.stats.setdefault(cat, []).append(rep)
 
     def pytest_collectreport(self, report):
-        """Store all collected tests for evalutation on finish
+        """Store all collected nbval tests for evaluation on finish
         """
         items = [x for x in report.result if isinstance(x, IPyNbCell)]
         self.nbval_items.extend(items)
@@ -59,6 +62,8 @@ class NbdimeReporter:
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, exitstatus):
+        """Called when test session has finished.
+        """
         outcome = yield
         outcome.get_result()
         summary_exit_codes = (
@@ -69,13 +74,18 @@ class NbdimeReporter:
             self.make_report(outcome)
 
     def make_report(self, outcome):
+        """Make report in form of two notebooks.
+
+        Use nbdime diff-web to present the difference between reference
+        cells and test cells.
+        """
         failures = self.getreports('failed')
         if not failures:
             return
         for rep in failures:
             # Check if this is a notebook node
             msg = self._getfailureheadline(rep)
-            self.section(msg)
+            self.section(msg, rep.longrepr.splitlines()[1])
             self._outrep_summary(rep)
         tmpdir = tempfile.mkdtemp()
         try:
@@ -104,9 +114,13 @@ class NbdimeReporter:
                 l.append(x)
         return l
 
-    def section(self, title):
+    def section(self, title, details):
         # Create markdown cell with title
-        header = nbformat.v4.new_markdown_cell("## " + title)
+        source = "## " + title
+        if details:
+            details = details.replace(bcolors.OKBLUE, '')
+            source += "\n\n**" + details + '**'
+        header = nbformat.v4.new_markdown_cell(source)
         # Add markdown in both ref and test
         self.nb_ref.cells.append(header)
         self.nb_test.cells.append(header)
@@ -121,7 +135,8 @@ class NbdimeReporter:
                 ref_cell.outputs = item.sanitize_outputs(ref_cell.outputs)
                 self.nb_ref.cells.append(item.cell)
                 test_cell = copy.copy(item.cell)
-                test_cell.outputs = item.sanitize_outputs(item.test_outputs)
+                if item.test_outputs:
+                    test_cell.outputs = item.sanitize_outputs(item.test_outputs)
                 self.nb_test.cells.append(test_cell)
 
     def _getfailureheadline(self, rep):
