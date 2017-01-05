@@ -27,6 +27,7 @@ from nbformat import NotebookNode
 # Kernel for running notebooks
 from .kernel import RunningKernel, CURRENT_ENV_KERNEL_NAME
 
+
 # define colours for pretty outputs
 class bcolors:
     HEADER = '\033[95m'
@@ -68,6 +69,19 @@ def pytest_addoption(parser):
                     help='Force test execution to use a python kernel in '
                          'the same enviornment that py.test was '
                          'launched from.')
+						 
+    term_group = parser.getgroup("terminal reporting")
+    term_group._addoption(
+        '--nbdime', action='store_true',
+        help="view failed nbval cells with nbdime.")
+
+
+def pytest_configure(config):
+    config.option.verbose -= config.option.quiet
+    if config.option.nbdime:
+        from .nbdime_reporter import NbdimeReporter
+        reporter = NbdimeReporter(config, sys.stdout)
+        config.pluginmanager.register(reporter, 'nbdimereporter')
 
 
 def pytest_collect_file(path, parent):
