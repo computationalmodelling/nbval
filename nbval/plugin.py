@@ -17,7 +17,9 @@ PY3 = sys.version_info[0] >= 3
 import six
 
 # Kernel for jupyter notebooks
-from jupyter_client.manager import start_new_kernel
+from jupyter_client.manager import KernelManager
+from jupyter_client.kernelspec import KernelSpecManager
+import ipykernel.kernelspec
 
 try:
     from Queue import Empty
@@ -36,6 +38,9 @@ class bcolors:
     WARNING = '\033[93m'
     FAIL = '\033[91m'
     ENDC = '\033[0m'
+
+
+CURRENT_ENV_KERNEL_NAME = ':nbval-parent-env'
 
 
 class NbCellError(Exception):
@@ -65,6 +70,11 @@ def pytest_addoption(parser):
                          'the outputs. This option only works when '
                          'the --nbval flag is passed to py.test')
 
+    group.addoption('--current-env', action='store_true',
+                    help='Force test execution to use a python kernel in '
+                         'the same enviornment that py.test was '
+                         'launched from.')
+
 
 def pytest_collect_file(path, parent):
     """
@@ -75,6 +85,39 @@ def pytest_collect_file(path, parent):
             return IPyNbFile(path, parent)
         elif parent.config.option.nbval_lax:
             return IPyNbFile(path, parent, compare_outputs=False)
+
+
+class NbvalKernelspecManager(KernelSpecManager):
+    """Kernel manager that also allows for python kernel in parent environment"""
+
+    def get_kernel_spec(self, kernel_name):
+        """Returns a :class:`KernelSpec` instance for the given kernel_name.
+
+        Raises :exc:`NoSuchKernel` if the given kernel name is not found.
+        """
+        if kernel_name == CURRENT_ENV_KERNEL_NAME:
+            return self.kernel_spec_class(
+                resource_dir=ipykernel.kernelspec.RESOURCES,
+                **ipykernel.kernelspec.get_kernel_dict())
+        else:
+            return super().get_kernel_spec(kernel_name)
+
+
+def start_new_kernel(startup_timeout=60, kernel_name='python', **kwargs):
+    """Start a new kernel, and return its Manager and Client"""
+    km = KernelManager(kernel_name=kernel_name,
+                       kernel_spec_manager=NbvalKernelspecManager())
+    km.start_kernel(**kwargs)
+    kc = km.client()
+    kc.start_channels()
+    try:
+        kc.wait_for_ready(timeout=startup_timeout)
+    except RuntimeError:
+        kc.stop_channels()
+        km.shutdown_kernel()
+        raise
+
+    return km, kc
 
 
 class RunningKernel(object):
@@ -98,7 +141,6 @@ class RunningKernel(object):
         self.km, self.kc = start_new_kernel(
             kernel_name=kernel_name,
             stderr=open(os.devnull, 'w'))
-
 
     def get_message(self, stream, timeout=None):
         """
@@ -178,7 +220,11 @@ class IPyNbFile(pytest.File):
         Here we start a kernel and setup the sanitize patterns.
         """
 
-        kernel_name = self.nb.metadata.get('kernelspec', {}).get('name', 'python')
+        if self.parent.config.option.current_env:
+            kernel_name = CURRENT_ENV_KERNEL_NAME
+        else:
+            kernel_name = self.nb.metadata.get(
+                'kernelspec', {}).get('name', 'python')
         self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
