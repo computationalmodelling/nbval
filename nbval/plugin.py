@@ -9,6 +9,7 @@ Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 import pytest
 import sys
 import re
+import hashlib
 from collections import OrderedDict
 
 # for python 3 compatibility
@@ -26,6 +27,7 @@ from nbformat import NotebookNode
 
 # Kernel for running notebooks
 from .kernel import RunningKernel, CURRENT_ENV_KERNEL_NAME
+
 
 # define colours for pretty outputs
 class bcolors:
@@ -69,16 +71,30 @@ def pytest_addoption(parser):
                          'the same enviornment that py.test was '
                          'launched from.')
 
+    term_group = parser.getgroup("terminal reporting")
+    term_group._addoption(
+        '--nbdime', action='store_true',
+        help="view failed nbval cells with nbdime.")
+
+
+def pytest_configure(config):
+    if config.option.nbdime:
+        from .nbdime_reporter import NbdimeReporter
+        reporter = NbdimeReporter(config, sys.stdout)
+        config.pluginmanager.register(reporter, 'nbdimereporter')
+
 
 def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
     if path.fnmatch("*.ipynb"):
+        rich_compare = parent.config.option.nbdime is True
         if parent.config.option.nbval:
-            return IPyNbFile(path, parent)
+            return IPyNbFile(path, parent, rich_compare=rich_compare)
         elif parent.config.option.nbval_lax:
-            return IPyNbFile(path, parent, compare_outputs=False)
+            return IPyNbFile(
+                path, parent, rich_compare=rich_compare, compare_outputs=False)
 
 
 
@@ -108,9 +124,23 @@ class IPyNbFile(pytest.File):
     """
     def __init__(self, *args, **kwargs):
         compare_outputs = kwargs.pop('compare_outputs', True)
+        rich_compare = kwargs.pop('rich_compare', False)
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
         self.compare_outputs = compare_outputs
+        self.skip_compare = (
+            'metadata',
+            'traceback',
+            'text/latex',
+            'prompt_number',
+            'stdout',
+            'stream',
+            'output_type',
+            'name',
+            'execution_count'
+            )
+        if not rich_compare:
+            self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
 
     def setup(self):
         """
@@ -203,6 +233,7 @@ class IPyNbCell(pytest.Item):
         self.cell_num = cell_num
         self.cell = cell
         self.docompare = docompare
+        self.test_outputs = None
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
@@ -224,17 +255,10 @@ class IPyNbCell(pytest.Item):
         description = "cell %d" % self.cell_num
         return self.fspath, 0, description
 
-    def compare_outputs(self, test, ref, skip_compare=('metadata',
-                                                       'image/png',
-                                                       'traceback',
-                                                       'text/latex',
-                                                       'prompt_number',
-                                                       'stdout',
-                                                       'stream',
-                                                       'output_type',
-                                                       'name',
-                                                       'execution_count'
-                                                       )):
+    def compare_outputs(self, test, ref, skip_compare=None):
+        # Use stored skips unless passed a specific value
+        skip_compare = skip_compare or self.parent.skip_compare
+
         # For every different key, we will store the outputs in a
         # single string, in a dictionary with the same keys
         # At the end, every dictionary entry will be compared
@@ -312,10 +336,19 @@ class IPyNbCell(pytest.Item):
         for testing in test:
             for key in testing.keys():
                 if key not in skip_compare:
-                    try:
-                        testing_outs[key] += self.sanitize(testing[key])
-                    except:
-                        testing_outs[key] = self.sanitize(testing[key])
+                    if key == 'data':
+                        for data_key in testing[key].keys():
+                            # Filter the keys in the SUB-dictionary again
+                            if data_key not in skip_compare:
+                                try:
+                                    testing_outs[data_key] += self.sanitize(testing[key][data_key])
+                                except:
+                                    testing_outs[data_key] = self.sanitize(testing[key][data_key])
+                    else:
+                        try:
+                            testing_outs[key] += self.sanitize(testing[key])
+                        except:
+                            testing_outs[key] = self.sanitize(testing[key])
 
 
         # The traceback from the comparison will be stored here.
@@ -345,11 +378,11 @@ class IPyNbCell(pytest.Item):
                                         + bcolors.FAIL
                                         + "<<<<<<<<<<<< Reference output from ipynb file:"
                                         + bcolors.ENDC)
-                self.comparison_traceback.append(reference_outs[key])
+                self.comparison_traceback.append(_trim_base64(reference_outs[key]))
                 self.comparison_traceback.append(bcolors.FAIL
                                         + '============ disagrees with newly computed (test) output:  '
                                         + bcolors.ENDC)
-                self.comparison_traceback.append(testing_outs[str(key)])
+                self.comparison_traceback.append(_trim_base64(testing_outs[str(key)]))
                 self.comparison_traceback.append(bcolors.FAIL
                                         + '>>>>>>>>>>>>'
                                         + bcolors.ENDC)
@@ -399,6 +432,8 @@ class IPyNbCell(pytest.Item):
 
         # This list stores the output information for the entire cell
         outs = []
+        # TODO: Only store if comparing with nbdime, to save on memory usage
+        self.test_outputs = outs
 
         # Now get the outputs from the iopub channel, need smaller timeout
         timeout = 5
@@ -480,20 +515,21 @@ class IPyNbCell(pytest.Item):
             # to obtain the 'text' and 'image/png' information
             elif msg_type in ('display_data', 'execute_result'):
                 out['metadata'] = reply['metadata']
+                out['data'] = {}
                 for mime, data in six.iteritems(reply['data']):
-                # This could be useful for reference or backward compatibility
-                #     attr = mime.split('/')[-1].lower()
-                #     attr = attr.replace('+xml', '').replace('plain', 'text')
-                #     setattr(out, attr, data)
+                    # This could be useful for reference or backward compatibility
+                    #     attr = mime.split('/')[-1].lower()
+                    #     attr = attr.replace('+xml', '').replace('plain', 'text')
+                    #     setattr(out, attr, data)
 
-                # Return the relevant entries from data:
-                # plain/text, image/png, execution_count, etc
-                # We coul use a mime types list for this (MAYBE)
-                    setattr(out, mime, data)
+                    # Return the relevant entries from data:
+                    # plain/text, image/png, execution_count, etc
+                    # We could use a mime types list for this (MAYBE)
+                    out.data[mime] = data
                 outs.append(out)
 
-                # if msg_type == 'execute_result':
-                #     out.prompt_number = reply['execution_count']
+                if msg_type == 'execute_result':
+                     out.execution_count = reply['execution_count']
 
 
             # if the message is a stream then we store the output
@@ -507,6 +543,11 @@ class IPyNbCell(pytest.Item):
             # cell execution. Therefore raise a cell error and pass the
             # traceback information.
             elif msg_type == 'error':
+                # Store error in output first
+                out['ename'] = reply['ename']
+                out['evalue'] = reply['evalue']
+                out['traceback'] = reply['traceback']
+                outs.append(out)
                 traceback = '\n' + '\n'.join(reply['traceback'])
                 raise NbCellError(self.cell_num, "Cell execution caused an exception",
                                   self.cell.source, traceback)
@@ -532,10 +573,45 @@ class IPyNbCell(pytest.Item):
             # The traceback containing the difference in the outputs is
             # stored in the variable comparison_traceback
             raise NbCellError(self.cell_num,
-                              "Error with cell",
+                              "Cell outputs differ",
                               self.cell.source,
                               # Here we must put the traceback output:
                               '\n'.join(self.comparison_traceback))
+
+    def sanitize_outputs(self, outputs, skip_sanitize=('metadata',
+                                                       'traceback',
+                                                       'latex',
+                                                       'prompt_number',
+                                                       'stdout',
+                                                       'stream',
+                                                       'output_type',
+                                                       'name',
+                                                       'execution_count'
+                                                       )):
+        sanitized_outputs = []
+        for output in outputs:
+            sanitized = {}
+            for key in output.keys():
+                if key in skip_sanitize:
+                    sanitized[key] = output[key]
+                else:
+                    if key == 'data':
+                        sanitized[key] = {}
+                        for data_key in output[key].keys():
+                            # Filter the keys in the SUB-dictionary again
+                            if data_key in skip_sanitize:
+                                sanitized[key][data_key] = output[key][data_key]
+                            else:
+                                sanitized[key][data_key] = self.sanitize(output[key][data_key])
+
+                    # Otherwise, just create a normal dictionary entry from
+                    # one of the keys of the dictionary
+                    else:
+                        # Create the dictionary entries on the fly, from the
+                        # existing ones to be compared
+                        sanitized[key] = self.sanitize(output[key])
+            sanitized_outputs.append(nbformat.from_dict(sanitized))
+        return sanitized_outputs
 
     def sanitize(self, s):
         """sanitize a string for comparison.
@@ -573,3 +649,15 @@ def get_sanitize_patterns(string):
     return re.findall('^regex: (.*)$\n^replace: (.*)$',
                          string,
                          flags=re.MULTILINE)
+
+def hash_string(s):
+    return hashlib.md5(s.encode("utf8")).hexdigest()
+
+_base64 = re.compile(r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$', re.MULTILINE | re.UNICODE)
+
+def _trim_base64(s):
+    """Trim and hash base64 strings"""
+    if len(s) > 64 and _base64.match(s.replace('\n', '')):
+        h = hash_string(s)
+        s = '%s...<snip base64, md5=%s...>' % (s[:8], h[:16])
+    return s
