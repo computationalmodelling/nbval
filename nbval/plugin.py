@@ -133,7 +133,7 @@ class IPyNbFile(pytest.File):
         self.skip_compare = (
             'metadata',
             'traceback',
-            'text/latex',
+            #'text/latex',
             'prompt_number',
             'stdout',
             'stream',
