@@ -70,7 +70,7 @@ def pytest_addoption(parser):
                     help='Force test execution to use a python kernel in '
                          'the same enviornment that py.test was '
                          'launched from.')
-						 
+
     term_group = parser.getgroup("terminal reporting")
     term_group._addoption(
         '--nbdime', action='store_true',
@@ -90,10 +90,12 @@ def pytest_collect_file(path, parent):
     Collect IPython notebooks using the specified pytest hook
     """
     if path.fnmatch("*.ipynb"):
+        rich_compare = parent.config.option.nbdime is True
         if parent.config.option.nbval:
-            return IPyNbFile(path, parent)
+            return IPyNbFile(path, parent, rich_compare=rich_compare)
         elif parent.config.option.nbval_lax:
-            return IPyNbFile(path, parent, compare_outputs=False)
+            return IPyNbFile(
+                path, parent, rich_compare=rich_compare, compare_outputs=False)
 
 
 
@@ -123,9 +125,23 @@ class IPyNbFile(pytest.File):
     """
     def __init__(self, *args, **kwargs):
         compare_outputs = kwargs.pop('compare_outputs', True)
+        rich_compare = kwargs.pop('rich_compare', False)
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
         self.compare_outputs = compare_outputs
+        self.skip_compare = (
+            'metadata',
+            'traceback',
+            'text/latex',
+            'prompt_number',
+            'stdout',
+            'stream',
+            'output_type',
+            'name',
+            'execution_count'
+            )
+        if not rich_compare:
+            self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
 
     def setup(self):
         """
@@ -240,16 +256,10 @@ class IPyNbCell(pytest.Item):
         description = "cell %d" % self.cell_num
         return self.fspath, 0, description
 
-    def compare_outputs(self, test, ref, skip_compare=('metadata',
-                                                       'traceback',
-                                                       'text/latex',
-                                                       'prompt_number',
-                                                       'stdout',
-                                                       'stream',
-                                                       'output_type',
-                                                       'name',
-                                                       'execution_count'
-                                                       )):
+    def compare_outputs(self, test, ref, skip_compare=None):
+        # Use stored skips unless passed a specific value
+        skip_compare = skip_compare or self.parent.skip_compare
+
         # For every different key, we will store the outputs in a
         # single string, in a dictionary with the same keys
         # At the end, every dictionary entry will be compared
