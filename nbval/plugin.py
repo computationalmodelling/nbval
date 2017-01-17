@@ -585,7 +585,7 @@ class IPyNbCell(pytest.Item):
 
     def sanitize_outputs(self, outputs, skip_sanitize=('metadata',
                                                        'traceback',
-                                                       'latex',
+                                                       'text/latex',
                                                        'prompt_number',
                                                        'stdout',
                                                        'stream',
