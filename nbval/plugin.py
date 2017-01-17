@@ -78,7 +78,6 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    config.option.verbose -= config.option.quiet
     if config.option.nbdime:
         from .nbdime_reporter import NbdimeReporter
         reporter = NbdimeReporter(config, sys.stdout)
