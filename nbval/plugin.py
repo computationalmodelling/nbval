@@ -227,7 +227,7 @@ class IPyNbCell(pytest.Item):
     def compare_outputs(self, test, ref, skip_compare=('metadata',
                                                        'image/png',
                                                        'traceback',
-                                                       'latex',
+                                                       'text/latex',
                                                        'prompt_number',
                                                        'stdout',
                                                        'stream',
