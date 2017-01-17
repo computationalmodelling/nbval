@@ -1,13 +1,12 @@
 """
 pytest ipython plugin modification
 
-Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr
+Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 
 """
 
 # import the pytest API
 import pytest
-import os
 import sys
 import re
 from collections import OrderedDict
@@ -15,9 +14,6 @@ from collections import OrderedDict
 # for python 3 compatibility
 PY3 = sys.version_info[0] >= 3
 import six
-
-# Kernel for jupyter notebooks
-from jupyter_client.manager import start_new_kernel
 
 try:
     from Queue import Empty
@@ -27,6 +23,9 @@ except:
 # for reading notebook files
 import nbformat
 from nbformat import NotebookNode
+
+# Kernel for running notebooks
+from .kernel import RunningKernel, CURRENT_ENV_KERNEL_NAME
 
 # define colours for pretty outputs
 class bcolors:
@@ -54,85 +53,50 @@ def pytest_addoption(parser):
     """
     group = parser.getgroup("general")
     group.addoption('--nbval', action='store_true',
-                    help="Validate IPython notebooks")
+                    help="Validate Jupyter notebooks")
+
+    group.addoption('--nbval-lax', action='store_true',
+                    help="Run Jupyter notebooks, only validating output on "
+                         "cells marked with # NBVAL_CHECK_OUTPUT")
 
     group.addoption('--sanitize-with',
                     help='File with regex expressions to sanitize '
                          'the outputs. This option only works when '
                          'the --nbval flag is passed to py.test')
 
+    group.addoption('--current-env', action='store_true',
+                    help='Force test execution to use a python kernel in '
+                         'the same enviornment that py.test was '
+                         'launched from.')
+
 
 def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
-    if path.fnmatch("*.ipynb") and parent.config.option.nbval:
-        return IPyNbFile(path, parent)
+    if path.fnmatch("*.ipynb"):
+        if parent.config.option.nbval:
+            return IPyNbFile(path, parent)
+        elif parent.config.option.nbval_lax:
+            return IPyNbFile(path, parent, compare_outputs=False)
 
 
 
-class RunningKernel(object):
+comment_markers = {
+    'PYTEST_VALIDATE_IGNORE_OUTPUT': 'ignore',  # For backwards compatibility
+    'NBVAL_IGNORE_OUTPUT': 'ignore',
+    'NBVAL_CHECK_OUTPUT': 'check',
+}
+
+def find_comment_marker(cellsource):
+    """Look through the cell source for comments which affect nbval's behaviour
     """
-    Running a Kernel a Jupyter, info can be found at:
-    http://jupyter-client.readthedocs.org/en/latest/messaging.html
-
-    The purpose of this class is to encapsulate interaction with the
-    jupyter kernel. Thus any changes on the jupyter side to how
-    kernels are started/managed should not require any changes outside
-    this class.
-
-    """
-    def __init__(self):
-        """
-        Initialise a new kernel
-        specfiy that matplotlib is inline and connect the stderr.
-        Stores the active kernel process and its manager.
-        """
-        self.km, self.kc = \
-                start_new_kernel(extra_arguments=['--matplotlib=inline'],
-                                  stderr=open(os.devnull, 'w'))
-
-
-    def get_message(self, stream, timeout=None):
-        """
-        Function is used to get a message from the iopub channel.
-        Timeout is None by default
-        When timeout is reached
-        """
-        if stream == 'iopub':
-            return self.kc.get_iopub_msg(timeout=timeout)
-        elif stream == 'shell':
-            return self.kc.get_shell_msg(timeout=timeout)
-
-    def execute_cell_input(self, cell_input, allow_stdin=None):
-        """
-        Executes a string of python code in cell input.
-        We do not allow the kernel to make requests to the stdin
-             this is the norm for notebooks
-
-        Function returns a unique message id of the reply from
-        the kernel.
-        """
-        return self.kc.execute(cell_input, allow_stdin=allow_stdin)
-
-
-    # These options are in case we wanted to restart the nb every time
-    # it is executed a certain task
-    def restart(self):
-        """
-        Instructs the kernel manager to restart the kernel process now.
-        """
-        self.km.restart_kernel(now=True)
-
-
-    def stop(self):
-        """
-        Instructs the kernel process to stop channels
-        and the kernel manager to then shutdown the process.
-        """
-        self.kc.stop_channels()
-        self.km.shutdown_kernel(now=True)
-        del self.km
+    for line in cellsource.splitlines():
+        line = line.strip()
+        if line.startswith('#'):
+            comment = line.lstrip('#').strip()
+            if comment in comment_markers:
+                return comment_markers[comment]
 
 
 class IPyNbFile(pytest.File):
@@ -143,15 +107,23 @@ class IPyNbFile(pytest.File):
     yields pytest items that are required by pytest.
     """
     def __init__(self, *args, **kwargs):
+        compare_outputs = kwargs.pop('compare_outputs', True)
         super(IPyNbFile, self).__init__(*args, **kwargs)
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
+        self.compare_outputs = compare_outputs
 
     def setup(self):
         """
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-        self.kernel = RunningKernel()
+
+        if self.parent.config.option.current_env:
+            kernel_name = CURRENT_ENV_KERNEL_NAME
+        else:
+            kernel_name = self.nb.metadata.get(
+                'kernelspec', {}).get('name', 'python')
+        self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
 
@@ -191,6 +163,7 @@ class IPyNbFile(pytest.File):
         The collect function is required by pytest and is used to yield pytest
         Item objects. We specify an Item for each code cell in the notebook.
         """
+
         self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
@@ -201,24 +174,17 @@ class IPyNbFile(pytest.File):
             # Skip the cells that have text, headings or related stuff
             # Only test code cells
             if cell.cell_type == 'code':
-                # If a cell starts with the comment string
-                # PYTEST_VALIDATE_IGNORE_OUTPUT then test that the cell
-                # executes without fail but do not compare the outputs.
-                #
-                # Here we check the first three lines; this is necessary because if the
-                # first two lines are cell magics, we still need to ignore the output.
-                ignore_output = False
-                for line in cell.source.split('\n')[:3]:
-                    if (line.startswith(r'# PYTEST_VALIDATE_IGNORE_OUTPUT') or
-                        line.startswith(r'#PYTEST_VALIDATE_IGNORE_OUTPUT')):
-                        ignore_output = True
-
-                if ignore_output:
-                    yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                    cell, docompare=False)
-                # otherwise yield a full test (the normal case)
+                # The cell may contain a comment indicating that its output
+                # should be checked or ignored. If it doesn't, use the default
+                # behaviour. The --nbval option checks unmarked cells.
+                comment_indication = find_comment_marker(cell.source)
+                if comment_indication is None:
+                    compare_outputs = self.compare_outputs
                 else:
-                    yield IPyNbCell('Cell ' + str(cell_num), self, cell_num, cell)
+                    compare_outputs = (comment_indication == 'check')
+
+                yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
+                                cell, docompare=compare_outputs)
 
             # Update 'code' cell count
             cell_num += 1
