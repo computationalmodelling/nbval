@@ -142,6 +142,8 @@ class IPyNbFile(pytest.File):
         if not rich_compare:
             self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
 
+    kernel = None
+
     def setup(self):
         """
         Called by pytest to setup the collector cells in .
@@ -153,6 +155,8 @@ class IPyNbFile(pytest.File):
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
+        with open('testkernel', 'w') as f:
+            f.write(kernel_name)
         self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
@@ -220,7 +224,8 @@ class IPyNbFile(pytest.File):
             cell_num += 1
 
     def teardown(self):
-        self.kernel.stop()
+        if self.kernel is not None:
+            self.kernel.stop()
 
 
 class IPyNbCell(pytest.Item):
