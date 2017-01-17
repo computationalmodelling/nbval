@@ -110,8 +110,10 @@ def find_comment_marker(cellsource):
     for line in cellsource.splitlines():
         line = line.strip()
         if line.startswith('#'):
+            # print("Found comment in '{}'".format(line))
             comment = line.lstrip('#').strip()
             if comment in comment_markers:
+                # print("Found marker {}".format(comment))
                 return comment_markers[comment]
 
 
@@ -131,7 +133,7 @@ class IPyNbFile(pytest.File):
         self.skip_compare = (
             'metadata',
             'traceback',
-            'text/latex',
+            #'text/latex',
             'prompt_number',
             'stdout',
             'stream',
@@ -585,7 +587,7 @@ class IPyNbCell(pytest.Item):
 
     def sanitize_outputs(self, outputs, skip_sanitize=('metadata',
                                                        'traceback',
-                                                       'latex',
+                                                       'text/latex',
                                                        'prompt_number',
                                                        'stdout',
                                                        'stream',
