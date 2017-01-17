@@ -110,8 +110,10 @@ def find_comment_marker(cellsource):
     for line in cellsource.splitlines():
         line = line.strip()
         if line.startswith('#'):
+            # print("Found comment in '{}'".format(line))
             comment = line.lstrip('#').strip()
             if comment in comment_markers:
+                # print("Found marker {}".format(comment))
                 return comment_markers[comment]
 
 
