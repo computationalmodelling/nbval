@@ -134,7 +134,6 @@ class IPyNbFile(pytest.File):
             'metadata',
             'traceback',
             #'text/latex',
-            'text/plain',
             'prompt_number',
             'stdout',
             'stream',
