@@ -1,13 +1,12 @@
 """
 pytest ipython plugin modification
 
-Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr
+Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 
 """
 
 # import the pytest API
 import pytest
-import os
 import sys
 import re
 from collections import OrderedDict
@@ -15,9 +14,6 @@ from collections import OrderedDict
 # for python 3 compatibility
 PY3 = sys.version_info[0] >= 3
 import six
-
-# Kernel for jupyter notebooks
-from jupyter_client.manager import start_new_kernel
 
 try:
     from Queue import Empty
@@ -27,6 +23,9 @@ except:
 # for reading notebook files
 import nbformat
 from nbformat import NotebookNode
+
+# Kernel for running notebooks
+from .kernel import RunningKernel, CURRENT_ENV_KERNEL_NAME
 
 # define colours for pretty outputs
 class bcolors:
@@ -65,6 +64,11 @@ def pytest_addoption(parser):
                          'the outputs. This option only works when '
                          'the --nbval flag is passed to py.test')
 
+    group.addoption('--current-env', action='store_true',
+                    help='Force test execution to use a python kernel in '
+                         'the same enviornment that py.test was '
+                         'launched from.')
+
 
 def pytest_collect_file(path, parent):
     """
@@ -76,69 +80,6 @@ def pytest_collect_file(path, parent):
         elif parent.config.option.nbval_lax:
             return IPyNbFile(path, parent, compare_outputs=False)
 
-
-class RunningKernel(object):
-    """
-    Running a Kernel a Jupyter, info can be found at:
-    http://jupyter-client.readthedocs.org/en/latest/messaging.html
-
-    The purpose of this class is to encapsulate interaction with the
-    jupyter kernel. Thus any changes on the jupyter side to how
-    kernels are started/managed should not require any changes outside
-    this class.
-
-    """
-    def __init__(self):
-        """
-        Initialise a new kernel
-        specfiy that matplotlib is inline and connect the stderr.
-        Stores the active kernel process and its manager.
-        """
-        self.km, self.kc = \
-                start_new_kernel(extra_arguments=['--matplotlib=inline'],
-                                  stderr=open(os.devnull, 'w'))
-
-
-    def get_message(self, stream, timeout=None):
-        """
-        Function is used to get a message from the iopub channel.
-        Timeout is None by default
-        When timeout is reached
-        """
-        if stream == 'iopub':
-            return self.kc.get_iopub_msg(timeout=timeout)
-        elif stream == 'shell':
-            return self.kc.get_shell_msg(timeout=timeout)
-
-    def execute_cell_input(self, cell_input, allow_stdin=None):
-        """
-        Executes a string of python code in cell input.
-        We do not allow the kernel to make requests to the stdin
-             this is the norm for notebooks
-
-        Function returns a unique message id of the reply from
-        the kernel.
-        """
-        return self.kc.execute(cell_input, allow_stdin=allow_stdin)
-
-
-    # These options are in case we wanted to restart the nb every time
-    # it is executed a certain task
-    def restart(self):
-        """
-        Instructs the kernel manager to restart the kernel process now.
-        """
-        self.km.restart_kernel(now=True)
-
-
-    def stop(self):
-        """
-        Instructs the kernel process to stop channels
-        and the kernel manager to then shutdown the process.
-        """
-        self.kc.stop_channels()
-        self.km.shutdown_kernel(now=True)
-        del self.km
 
 
 comment_markers = {
@@ -176,7 +117,13 @@ class IPyNbFile(pytest.File):
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-        self.kernel = RunningKernel()
+
+        if self.parent.config.option.current_env:
+            kernel_name = CURRENT_ENV_KERNEL_NAME
+        else:
+            kernel_name = self.nb.metadata.get(
+                'kernelspec', {}).get('name', 'python')
+        self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
 
@@ -216,6 +163,7 @@ class IPyNbFile(pytest.File):
         The collect function is required by pytest and is used to yield pytest
         Item objects. We specify an Item for each code cell in the notebook.
         """
+
         self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
