@@ -1,5 +1,5 @@
 PYTEST ?= py.test
-TEST_OPTIONS ?= -sv
+TEST_OPTIONS ?= -v --current-env
 
 all: test
 
