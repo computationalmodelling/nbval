@@ -49,7 +49,7 @@ def create_test_cases_from_filenames():
     """
     testdata, testnames = [], []
 
-    ipynb_files = glob.glob("test-*.ipynb")
+    ipynb_files = glob.glob("unit/test-*.ipynb")
     for filename in ipynb_files:
         correct_outcome = filename.split('-')[2]
         assert correct_outcome in ['pass', 'fail']
