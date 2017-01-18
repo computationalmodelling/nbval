@@ -29,4 +29,4 @@ install:
   - pip install .
 
 # command to run tests
-script: py.test tests/ --nbval --current-env --sanitize-with tests/sanitize_defaults.cfg
+script: make test
