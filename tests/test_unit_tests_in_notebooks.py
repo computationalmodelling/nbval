@@ -3,24 +3,6 @@ import subprocess
 
 import pytest
 
-# from datetime import datetime, timedelta
-
-# testdata1 = [
-#     (datetime(2001, 12, 12), datetime(2001, 12, 11), timedelta(1)),
-#     (datetime(2001, 12, 11), datetime(2001, 12, 12), timedelta(-1)),
-# ]
-#
-#
-# @pytest.mark.parametrize(
-#     "a,b,expected", testdata1, ids=["forward", "backward"])
-# def test_timedistance_v1(a, b, expected):
-#     diff = a - b
-#     assert diff == expected
-
-
-testdata = [('filename1', 'pass'), ('filename2', 'fail')]
-testnames = ['test1', 'test2']
-
 
 def create_test_cases_from_filenames():
     """Idea is to create test cases based on file names. Convention is
@@ -59,10 +41,7 @@ def create_test_cases_from_filenames():
     return testnames, testdata
 
 
-# testdata = [('filename1', 'pass'), ('filename2', 'fail')]
-# testnames = ['test1', 'test2']
-
-
+# Create test cases
 testnames, testdata = create_test_cases_from_filenames()
 
 
@@ -70,7 +49,8 @@ testnames, testdata = create_test_cases_from_filenames()
 def test_print(filename, correctoutcome):
 
     command = "py.test --nbval -v " + filename
-    print("Starting parametrized test with filename={}, correctoutcome={}".format(filename, correctoutcome))
+    print("Starting parametrized test with filename={}, correctoutcome={}"
+          .format(filename, correctoutcome))
     print("Command about to execute is '{}'".format(command))
 
     exitcode = subprocess.call(command, shell=True)
@@ -80,4 +60,5 @@ def test_print(filename, correctoutcome):
         print("The call of py.test has not reported errors - this is good.")
     elif correctoutcome is 'fail':
         assert exitcode is not 0
-        print("The call of py.test has reported errors - this is good for this test.")
+        print("The call of py.test has reported errors - " +
+              "this is good for this test.")
