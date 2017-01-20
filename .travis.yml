@@ -9,6 +9,8 @@ install:
   # version is the same.
   - unset VIRTUAL_ENV
   - pip install .
+  # have some tests using sympy
+  - pip install sympy
 
 # command to run tests
 script: make test
