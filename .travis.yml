@@ -11,6 +11,8 @@ install:
   - pip install .
   # have some tests using sympy
   - pip install sympy
+  # and some use matplotlib
+  - pip install matplotlib
 
 # command to run tests
 script: make test
