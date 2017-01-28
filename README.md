@@ -105,9 +105,9 @@ verbose `-v` option. The IPython notebook plugin can be found under the
 
 ## Acknowledgements
 This plugin was inspired by Andrea Zonca's py.test plugin for collecting unit
-tests in the IPython notebooks ( https://github.com/zonca/pytest-ipynb ).
+tests in the IPython notebooks (https://github.com/zonca/pytest-ipynb).
 
-The original prototyp was based on the template in
+The original prototype was based on the template in
 https://gist.github.com/timo/2621679 and the code of a testing system
 for notebooks https://gist.github.com/minrk/2620735 which we
 integrated and mixed with the `py.test` system.
@@ -121,10 +121,11 @@ We acknowledge financial support from
   EPSRC’s Doctoral Training Centre in Complex System Simulation
   ((EP/G03690X/1),
 
-- The Gordon and Betty MooreF oundation through GrantGBMF #4856,by the
+- The Gordon and Betty Moore Foundation through Grant GBMF #4856,by the
   Alfred P. Sloan Foundation and by the Helmsley Trust.
 
 
 ## Authors
 
-2014 - 2017 David Cortes-Ortuno, Oliver Laslett, T. Kluyver, Vidar Fauske, Maximilian Albert, Ondrej Hovorka, Hans Fangohr
+2014 - 2017 David Cortes-Ortuno, Oliver Laslett, T. Kluyver, Vidar
+Fauske, Maximilian Albert, MinRK, Ondrej Hovorka, Hans Fangohr
