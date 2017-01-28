@@ -114,7 +114,7 @@ integrated and mixed with the `py.test` system.
 
 We acknowledge financial support from
 
-- OpenDreamKitHorizon2020EuropeanResearchInfrastructuresproject (#676541), http://opendreamkit.org
+- OpenDreamKit Horizon 2020 European Research Infrastructures project (#676541), http://opendreamkit.org
 
 - EPSRC’s Centre for Doctoral Training in Next Generation
   Computational Modelling, http://ngcm.soton.ac.uk (#EP/L015382/1) and
