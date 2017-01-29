@@ -30,7 +30,7 @@ class NbvalKernelspecManager(KernelSpecManager):
                 resource_dir=ipykernel.kernelspec.RESOURCES,
                 **ipykernel.kernelspec.get_kernel_dict())
         else:
-            return super().get_kernel_spec(kernel_name)
+            return super(NbvalKernelspecManager, self).get_kernel_spec(kernel_name)
 
 
 def start_new_kernel(startup_timeout=60, kernel_name='python', **kwargs):
