@@ -1,3 +1,4 @@
+import os
 import glob
 import subprocess
 
@@ -31,9 +32,13 @@ def create_test_cases_from_filenames():
     """
     testdata, testnames = [], []
 
-    ipynb_files = glob.glob("unit/test-*.ipynb")
+    pattern = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           "ipynb-test-samples",
+                                           "test-*.ipynb"))
+    ipynb_files = glob.glob(pattern)
     for filename in ipynb_files:
-        correct_outcome = filename.split('-')[2]
+        testname = os.path.basename(filename)
+        correct_outcome = testname.split('-')[2]
         assert correct_outcome in ['pass', 'fail']
         testnames.append(filename)
         testdata.append((filename, correct_outcome))
@@ -48,12 +53,12 @@ testnames, testdata = create_test_cases_from_filenames()
 @pytest.mark.parametrize("filename, correctoutcome", testdata, ids=testnames)
 def test_print(filename, correctoutcome):
 
-    command = "py.test --nbval -v " + filename
+    command = ["py.test", "--nbval", "-v", "--current-env", filename]
     print("Starting parametrized test with filename={}, correctoutcome={}"
           .format(filename, correctoutcome))
     print("Command about to execute is '{}'".format(command))
 
-    exitcode = subprocess.call(command, shell=True)
+    exitcode = subprocess.call(command)
 
     if correctoutcome is 'pass':
         assert exitcode is 0

@@ -10,7 +10,7 @@ import pytest
 import sys
 import re
 import hashlib
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 # for python 3 compatibility
 PY3 = sys.version_info[0] >= 3
@@ -89,12 +89,7 @@ def pytest_collect_file(path, parent):
     Collect IPython notebooks using the specified pytest hook
     """
     if path.fnmatch("*.ipynb"):
-        rich_compare = parent.config.option.nbdime is True
-        if parent.config.option.nbval:
-            return IPyNbFile(path, parent, rich_compare=rich_compare)
-        elif parent.config.option.nbval_lax:
-            return IPyNbFile(
-                path, parent, rich_compare=rich_compare, compare_outputs=False)
+        return IPyNbFile(path, parent)
 
 
 
@@ -102,10 +97,13 @@ comment_markers = {
     'PYTEST_VALIDATE_IGNORE_OUTPUT': 'ignore',  # For backwards compatibility
     'NBVAL_IGNORE_OUTPUT': 'ignore',
     'NBVAL_CHECK_OUTPUT': 'check',
+    'NBVAL_RAISES_EXCEPTION': 'check_exception',
 }
 
-def find_comment_marker(cellsource):
+def find_comment_markers(cellsource):
     """Look through the cell source for comments which affect nbval's behaviour
+
+    Yield an iterable of ``(MARKER_TYPE, True)``.
     """
     for line in cellsource.splitlines():
         line = line.strip()
@@ -114,7 +112,7 @@ def find_comment_marker(cellsource):
             comment = line.lstrip('#').strip()
             if comment in comment_markers:
                 # print("Found marker {}".format(comment))
-                return comment_markers[comment]
+                yield (comment_markers[comment], True)
 
 
 class IPyNbFile(pytest.File):
@@ -125,11 +123,10 @@ class IPyNbFile(pytest.File):
     yields pytest items that are required by pytest.
     """
     def __init__(self, *args, **kwargs):
-        compare_outputs = kwargs.pop('compare_outputs', True)
-        rich_compare = kwargs.pop('rich_compare', False)
         super(IPyNbFile, self).__init__(*args, **kwargs)
+        config = self.parent.config
         self.sanitize_patterns = OrderedDict()  # Filled in setup_sanitize_patterns()
-        self.compare_outputs = compare_outputs
+        self.compare_outputs = not config.option.nbval_lax
         self.skip_compare = (
             'metadata',
             'traceback',
@@ -137,11 +134,10 @@ class IPyNbFile(pytest.File):
             'prompt_number',
             'stdout',
             'stream',
-            'output_type',
             'name',
             'execution_count'
             )
-        if not rich_compare:
+        if not config.option.nbdime:
             self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
 
     kernel = None
@@ -213,14 +209,10 @@ class IPyNbFile(pytest.File):
                 # The cell may contain a comment indicating that its output
                 # should be checked or ignored. If it doesn't, use the default
                 # behaviour. The --nbval option checks unmarked cells.
-                comment_indication = find_comment_marker(cell.source)
-                if comment_indication is None:
-                    compare_outputs = self.compare_outputs
-                else:
-                    compare_outputs = (comment_indication == 'check')
-
+                options = defaultdict(bool, find_comment_markers(cell.source))
+                options.setdefault('check', self.compare_outputs)
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                cell, docompare=compare_outputs)
+                                cell, options)
 
             # Update 'code' cell count
             cell_num += 1
@@ -231,7 +223,7 @@ class IPyNbFile(pytest.File):
 
 
 class IPyNbCell(pytest.Item):
-    def __init__(self, name, parent, cell_num, cell, docompare=True):
+    def __init__(self, name, parent, cell_num, cell, options):
         super(IPyNbCell, self).__init__(name, parent)
 
         # Store reference to parent IPynbFile so that we have access
@@ -239,8 +231,8 @@ class IPyNbCell(pytest.Item):
         self.parent = parent
         self.cell_num = cell_num
         self.cell = cell
-        self.docompare = docompare
         self.test_outputs = None
+        self.options = options
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
@@ -274,7 +266,8 @@ class IPyNbCell(pytest.Item):
         # We concatenate the outputs because the ipython notebook produces
         # them in a random number of dictionaries. So, it is easier
         # to compare only one chunk of data
-        testing_outs, reference_outs = {}, {}
+        testing_outs = defaultdict(str)
+        reference_outs = defaultdict(str)
 
         # Check the references (embedded notebook outputs)
         # and start appendind the outputs for every
@@ -310,10 +303,7 @@ class IPyNbCell(pytest.Item):
                         for data_key in reference[key].keys():
                             # Filter the keys in the SUB-dictionary again
                             if data_key not in skip_compare:
-                                try:
-                                    reference_outs[data_key] += self.sanitize(reference[key][data_key])
-                                except:
-                                    reference_outs[data_key] = self.sanitize(reference[key][data_key])
+                                reference_outs[data_key] += self.sanitize(reference[key][data_key])
 
 
                     # NOTICE: that execute_result (similar for figures than
@@ -333,10 +323,7 @@ class IPyNbCell(pytest.Item):
                     else:
                         # Create the dictionary entries on the fly, from the
                         # existing ones to be compared
-                        try:
-                            reference_outs[key] += self.sanitize(reference[key])
-                        except:
-                            reference_outs[key] = self.sanitize(reference[key])
+                        reference_outs[key] += self.sanitize(reference[key])
 
         # the same for the testing outputs (the cells that are being executed)
         # display_data cells were already processed! (see the execution loop)
@@ -347,20 +334,12 @@ class IPyNbCell(pytest.Item):
                         for data_key in testing[key].keys():
                             # Filter the keys in the SUB-dictionary again
                             if data_key not in skip_compare:
-                                try:
-                                    testing_outs[data_key] += self.sanitize(testing[key][data_key])
-                                except:
-                                    testing_outs[data_key] = self.sanitize(testing[key][data_key])
+                                testing_outs[data_key] += self.sanitize(testing[key][data_key])
                     else:
-                        try:
-                            testing_outs[key] += self.sanitize(testing[key])
-                        except:
-                            testing_outs[key] = self.sanitize(testing[key])
-
+                        testing_outs[key] += self.sanitize(testing[key])
 
         # The traceback from the comparison will be stored here.
         self.comparison_traceback = []
-
 
         for key in reference_outs.keys():
 
@@ -553,11 +532,12 @@ class IPyNbCell(pytest.Item):
                 # Store error in output first
                 out['ename'] = reply['ename']
                 out['evalue'] = reply['evalue']
-                out['traceback'] = reply['traceback']
+                # out['traceback'] = reply['traceback']
                 outs.append(out)
-                traceback = '\n' + '\n'.join(reply['traceback'])
-                raise NbCellError(self.cell_num, "Cell execution caused an exception",
-                                  self.cell.source, traceback)
+                if not self.options['check_exception']:
+                    traceback = '\n' + '\n'.join(reply['traceback'])
+                    raise NbCellError(self.cell_num, "Cell execution caused an exception",
+                                      self.cell.source, traceback)
 
             # any other message type is not expected
             # should this raise an error?
@@ -570,10 +550,9 @@ class IPyNbCell(pytest.Item):
         #     self.diff_number_outputs(outs, self.cell.outputs)
         #     failed = True
         failed = False
-        if self.docompare:
+        if self.options['check'] and not self.options['ignore']:
             if not self.compare_outputs(outs, self.cell.outputs):
                 failed = True
-
 
         # If the comparison failed then we raise an exception.
         if failed:
