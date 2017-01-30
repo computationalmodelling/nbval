@@ -210,17 +210,19 @@ class IPyNbFile(pytest.File):
             # Skip the cells that have text, headings or related stuff
             # Only test code cells
             if cell.cell_type == 'code':
+                metadata = cell.metadata.get('nbval', {})
                 # The cell may contain a comment indicating that its output
                 # should be checked or ignored. If it doesn't, use the default
                 # behaviour. The --nbval option checks unmarked cells.
                 comment_indication = find_comment_marker(cell.source)
                 if comment_indication is None:
-                    compare_outputs = self.compare_outputs
+                    compare_outputs = metadata.get('compare_outputs', self.compare_outputs)
                 else:
                     compare_outputs = (comment_indication == 'check')
 
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                cell, docompare=compare_outputs)
+                                cell, metadata=metadata,
+                                docompare=compare_outputs)
 
             # Update 'code' cell count
             cell_num += 1
@@ -231,7 +233,7 @@ class IPyNbFile(pytest.File):
 
 
 class IPyNbCell(pytest.Item):
-    def __init__(self, name, parent, cell_num, cell, docompare=True):
+    def __init__(self, name, parent, cell_num, cell, metadata, docompare):
         super(IPyNbCell, self).__init__(name, parent)
 
         # Store reference to parent IPynbFile so that we have access
@@ -239,8 +241,14 @@ class IPyNbCell(pytest.Item):
         self.parent = parent
         self.cell_num = cell_num
         self.cell = cell
+        self.metadata = metadata
         self.docompare = docompare
         self.test_outputs = None
+
+        extra_sanitizers = self.metadata.get('extra_sanitizers', '')
+        self.sanitize_patterns = OrderedDict(
+            get_sanitize_patterns(extra_sanitizers))
+
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
@@ -512,7 +520,7 @@ class IPyNbCell(pytest.Item):
             # 'execution_count' number which does not seems useful
             # (we will filter it in the sanitize function)
             #
-            # When the reply is display_data or execute_count,
+            # When the reply is display_data or execute_result,
             # the dictionary contains
             # a 'data' sub-dictionary with the 'text' AND the 'image/png'
             # picture (in hexadecimal). There is also a 'metadata' entry
@@ -622,9 +630,6 @@ class IPyNbCell(pytest.Item):
 
     def sanitize(self, s):
         """sanitize a string for comparison.
-
-        fix universal newlines, strip trailing newlines,
-        and normalize likely random values (memory addresses and UUIDs)
         """
         if not isinstance(s, six.string_types):
             return s
@@ -635,9 +640,17 @@ class IPyNbCell(pytest.Item):
         is passed when py.test is called. Otherwise, the strings
         are not processed
         """
-        for regex, replace in six.iteritems(self.parent.sanitize_patterns):
+        for regex, replace in self._get_santitize_patterns():
             s = re.sub(regex, replace, s)
         return s
+
+    def _get_santitize_patterns(self):
+        # Yield cell-specific patterns first
+        for pattern in six.iteritems(self.sanitize_patterns):
+            yield pattern
+        # Then yield patterns from parent
+        for pattern in six.iteritems(self.parent.sanitize_patterns):
+            yield pattern
 
 
 def get_sanitize_patterns(string):
