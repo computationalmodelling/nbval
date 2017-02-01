@@ -43,6 +43,10 @@ class NbCellError(Exception):
     """ custom exception for error reporting. """
 
 
+class TestTimeoutError(Exception):
+    """ custom exception for error reporting. """
+
+
 def pytest_addoption(parser):
     """
     Adds the --nbval option flag for py.test.
@@ -247,6 +251,8 @@ class IPyNbCell(pytest.Item):
                     bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC
             msg_items.append(formatstring % excinfo.value.args)
             return "\n".join(msg_items)
+        elif isinstance(excinfo.value, TestTimeoutError):
+            return "%s%s%s" % (bcolors.FAIL, str(excinfo.value), bcolors.ENDC)
         else:
             return "pytest plugin exception: %s" % str(excinfo.value)
 
@@ -406,9 +412,9 @@ class IPyNbCell(pytest.Item):
                 msg = self.parent.get_kernel_message(stream='shell',
                                                      timeout=timeout)
             except Empty:
-                raise NbCellError("Timeout of %d seconds exceeded"
-                                  " executing cell: %s" (timeout,
-                                                         self.cell.input))
+                raise TestTimeoutError(
+                    "Timeout of %d seconds exceeded executing cell: %s" (
+                        timeout, self.cell.input))
 
             # Is this the message we are waiting for?
             if msg['parent_header'].get('msg_id') == msg_id:
@@ -434,8 +440,8 @@ class IPyNbCell(pytest.Item):
             except Empty:
                 # This is not working: ! The code will not be checked
                 # if the time is out (when the cell stops to be executed?)
-                raise NbCellError("Timeout of %d seconds exceeded"
-                                  " waiting for output.")
+                raise TestTimeoutError(
+                    "Timeout of %d seconds exceeded waiting for output.")
 
 
 
