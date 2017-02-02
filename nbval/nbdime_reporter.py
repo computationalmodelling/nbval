@@ -85,7 +85,9 @@ class NbdimeReporter:
         for rep in failures:
             # Check if this is a notebook node
             msg = self._getfailureheadline(rep)
-            self.section(msg, rep.longrepr.splitlines()[1])
+            lines = rep.longrepr.splitlines()
+            if len(lines) > 1:
+                self.section(msg, lines[1])
             self._outrep_summary(rep)
         tmpdir = tempfile.mkdtemp()
         try:
