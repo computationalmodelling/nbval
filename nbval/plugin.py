@@ -538,7 +538,7 @@ class IPyNbCell(pytest.Item):
                 # Store error in output first
                 out['ename'] = reply['ename']
                 out['evalue'] = reply['evalue']
-                # out['traceback'] = reply['traceback']
+                out['traceback'] = reply['traceback']
                 outs.append(out)
                 if not self.options['check_exception']:
                     traceback = '\n' + '\n'.join(reply['traceback'])
