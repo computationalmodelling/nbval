@@ -76,7 +76,7 @@ def pytest_addoption(parser):
                          'launched from.')
 
     group.addoption('--cell-timeout', action='store', default=2000,
-                    type='float',
+                    type=float,
                     help='Timeout for cell execution, in seconds.')
 
     term_group = parser.getgroup("terminal reporting")
