@@ -102,6 +102,13 @@ class RunningKernel(object):
         """
         self.km.restart_kernel(now=True)
 
+    def interrupt(self):
+        """
+        Instructs the kernel to stop whatever it is doing, and await
+        further commands.
+        """
+        self.km.interrupt_kernel()
+
     def stop(self):
         """
         Instructs the kernel process to stop channels
