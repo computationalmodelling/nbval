@@ -13,7 +13,6 @@ import hashlib
 from collections import OrderedDict, defaultdict
 
 # for python 3 compatibility
-PY3 = sys.version_info[0] >= 3
 import six
 
 try:
@@ -105,6 +104,7 @@ comment_markers = {
     'NBVAL_RAISES_EXCEPTION': 'check_exception',
 }
 
+
 def find_comment_markers(cellsource):
     """Look through the cell source for comments which affect nbval's behaviour
 
@@ -140,8 +140,8 @@ class IPyNbFile(pytest.File):
             'stdout',
             'stream',
             'name',
-            'execution_count'
-            )
+            'execution_count',
+        )
         if not config.option.nbdime:
             self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
 
@@ -256,7 +256,7 @@ class IPyNbCell(pytest.Item):
                 exc.cell_num,
                 str(exc),
                 exc.source
-                ))
+            ))
             if exc.inner_traceback:
                 msg_items.append((
                     bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC) %
@@ -537,7 +537,7 @@ class IPyNbCell(pytest.Item):
                 outs.append(out)
 
                 if msg_type == 'execute_result':
-                     out.execution_count = reply['execution_count']
+                    out.execution_count = reply['execution_count']
 
 
             # if the message is a stream then we store the output
@@ -655,13 +655,15 @@ def get_sanitize_patterns(string):
     A list of (regex, replace) pairs.
     """
     return re.findall('^regex: (.*)$\n^replace: (.*)$',
-                         string,
-                         flags=re.MULTILINE)
+                      string,
+                      flags=re.MULTILINE)
+
 
 def hash_string(s):
     return hashlib.md5(s.encode("utf8")).hexdigest()
 
 _base64 = re.compile(r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$', re.MULTILINE | re.UNICODE)
+
 
 def _trim_base64(s):
     """Trim and hash base64 strings"""
