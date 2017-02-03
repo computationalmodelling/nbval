@@ -94,6 +94,11 @@ class RunningKernel(object):
         """
         return self.kc.execute(cell_input, allow_stdin=allow_stdin)
 
+    def is_alive(self):
+        if hasattr(self, 'km'):
+            return self.km.is_alive()
+        return False
+
     # These options are in case we wanted to restart the nb every time
     # it is executed a certain task
     def restart(self):
