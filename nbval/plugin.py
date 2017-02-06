@@ -100,8 +100,8 @@ def pytest_collect_file(path, parent):
 
 
 comment_markers = {
-    'PYTEST_VALIDATE_IGNORE_OUTPUT': 'ignore',  # For backwards compatibility
-    'NBVAL_IGNORE_OUTPUT': 'ignore',
+    'PYTEST_VALIDATE_IGNORE_OUTPUT': ('check', False),  # For backwards compatibility
+    'NBVAL_IGNORE_OUTPUT': ('check', False),
     'NBVAL_CHECK_OUTPUT': 'check',
     'NBVAL_RAISES_EXCEPTION': 'check_exception',
 }
@@ -124,7 +124,13 @@ def find_comment_markers(cellsource):
             comment = line.lstrip('#').strip()
             if comment in comment_markers:
                 # print("Found marker {}".format(comment))
-                yield (comment_markers[comment], True)
+                marker = comment_markers[comment]
+                if isinstance(marker, tuple):
+                    yield marker
+                else:
+                    # If not an explicit tuple ('option', True/False),
+                    # imply ('option', True)
+                    yield (marker, True)
 
 
 def find_metadata_tags(cell_metadata):
@@ -136,7 +142,13 @@ def find_metadata_tags(cell_metadata):
         return
     for tag in tags:
         if tag in metadata_tags:
-            yield (metadata_tags[tag], True)
+            opt = metadata_tags[tag]
+            if isinstance(opt, tuple):
+                yield opt
+            else:
+                # If not an explicit tuple ('option', True/False),
+                # imply ('option', True)
+                yield (opt, True)
 
 
 class IPyNbFile(pytest.File):
@@ -286,9 +298,6 @@ class IPyNbCell(pytest.Item):
     def reportinfo(self):
         description = "cell %d" % self.cell_num
         return self.fspath, 0, description
-
-    def should_compare_outputs(self):
-        return self.options['check'] and not self.options['ignore']
 
     def compare_outputs(self, test, ref, skip_compare=None):
         # Use stored skips unless passed a specific value
@@ -593,7 +602,7 @@ class IPyNbCell(pytest.Item):
         #     self.diff_number_outputs(outs, self.cell.outputs)
         #     failed = True
         failed = False
-        if self.should_compare_outputs():
+        if self.options['check']:
             if not self.compare_outputs(outs, self.cell.outputs):
                 failed = True
 
