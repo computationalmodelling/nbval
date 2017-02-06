@@ -10,6 +10,7 @@ import pytest
 import sys
 import re
 import hashlib
+import warnings
 from collections import OrderedDict, defaultdict
 
 # for python 3 compatibility
@@ -105,6 +106,12 @@ comment_markers = {
     'NBVAL_RAISES_EXCEPTION': 'check_exception',
 }
 
+metadata_tags = {
+    k.lower().replace('_', '-'): v
+    for (k, v) in comment_markers.items()
+}
+
+
 def find_comment_markers(cellsource):
     """Look through the cell source for comments which affect nbval's behaviour
 
@@ -118,6 +125,18 @@ def find_comment_markers(cellsource):
             if comment in comment_markers:
                 # print("Found marker {}".format(comment))
                 yield (comment_markers[comment], True)
+
+
+def find_metadata_tags(cell_metadata):
+    tags = cell_metadata.get('tags', None)
+    if tags is None:
+        return
+    elif not isinstance(tags, list):
+        warnings.warn("Cell tags is not a list, ignoring.")
+        return
+    for tag in tags:
+        if tag in metadata_tags:
+            yield (metadata_tags[tag], True)
 
 
 class IPyNbFile(pytest.File):
@@ -212,7 +231,8 @@ class IPyNbFile(pytest.File):
                 # The cell may contain a comment indicating that its output
                 # should be checked or ignored. If it doesn't, use the default
                 # behaviour. The --nbval option checks unmarked cells.
-                options = defaultdict(bool, find_comment_markers(cell.source))
+                options = defaultdict(bool, find_metadata_tags(cell.metadata))
+                options.update(find_comment_markers(cell.source))
                 options.setdefault('check', self.compare_outputs)
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
                                 cell, options)
@@ -266,6 +286,9 @@ class IPyNbCell(pytest.Item):
     def reportinfo(self):
         description = "cell %d" % self.cell_num
         return self.fspath, 0, description
+
+    def should_compare_outputs(self):
+        return self.options['check'] and not self.options['ignore']
 
     def compare_outputs(self, test, ref, skip_compare=None):
         # Use stored skips unless passed a specific value
@@ -570,7 +593,7 @@ class IPyNbCell(pytest.Item):
         #     self.diff_number_outputs(outs, self.cell.outputs)
         #     failed = True
         failed = False
-        if self.options['check'] and not self.options['ignore']:
+        if self.should_compare_outputs():
             if not self.compare_outputs(outs, self.cell.outputs):
                 failed = True
 
