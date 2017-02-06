@@ -158,8 +158,6 @@ class IPyNbFile(pytest.File):
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
-        with open('testkernel', 'w') as f:
-            f.write(kernel_name)
         self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
