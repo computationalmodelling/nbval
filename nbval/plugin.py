@@ -75,7 +75,7 @@ def pytest_addoption(parser):
                          'the same enviornment that py.test was '
                          'launched from.')
 
-    group.addoption('--cell-timeout', action='store', default=2000,
+    group.addoption('--nbval-cell-timeout', action='store', default=2000,
                     type=float,
                     help='Timeout for cell execution, in seconds.')
 
@@ -447,7 +447,7 @@ class IPyNbCell(pytest.Item):
         # Timeout for the cell execution
         # after code is sent for execution, the kernel sends a message on
         # the shell channel. Timeout if no message received.
-        timeout = self.config.option.cell_timeout
+        timeout = self.config.option.nbval_cell_timeout
 
         # Poll the shell channel to get a message
         while True:
