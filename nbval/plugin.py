@@ -41,6 +41,11 @@ class bcolors:
 
 class NbCellError(Exception):
     """ custom exception for error reporting. """
+    def __init__(self, cell_num, msg, source, traceback=None, *args, **kwargs):
+        self.cell_num = cell_num
+        super(NbCellError, self).__init__(msg, *args, **kwargs)
+        self.source = source
+        self.inner_traceback = traceback
 
 
 def pytest_addoption(parser):
@@ -153,8 +158,6 @@ class IPyNbFile(pytest.File):
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
-        with open('testkernel', 'w') as f:
-            f.write(kernel_name)
         self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
@@ -240,15 +243,25 @@ class IPyNbCell(pytest.Item):
 
     def repr_failure(self, excinfo):
         """ called when self.runtest() raises an exception. """
-        if isinstance(excinfo.value, NbCellError):
-            msg_items = [bcolors.FAIL + "Notebook cell execution failed" + bcolors.ENDC]
-            formatstring = bcolors.OKBLUE + "Cell %d: %s\n\n" + \
-                    "Input:\n" + bcolors.ENDC + "%s\n\n" + \
-                    bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC
-            msg_items.append(formatstring % excinfo.value.args)
+        exc = excinfo.value
+        if isinstance(exc, NbCellError):
+            msg_items = [
+                bcolors.FAIL + "Notebook cell execution failed" + bcolors.ENDC]
+            formatstring = (
+                bcolors.OKBLUE + "Cell %d: %s\n\n" +
+                "Input:\n" + bcolors.ENDC + "%s\n")
+            msg_items.append(formatstring % (
+                exc.cell_num,
+                str(exc),
+                exc.source
+                ))
+            if exc.inner_traceback:
+                msg_items.append((
+                    bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC) %
+                    exc.inner_traceback)
             return "\n".join(msg_items)
         else:
-            return "pytest plugin exception: %s" % str(excinfo.value)
+            return "pytest plugin exception: %s" % str(exc)
 
     def reportinfo(self):
         description = "cell %d" % self.cell_num
@@ -345,10 +358,11 @@ class IPyNbCell(pytest.Item):
 
             # Check if they have the same keys
             if key not in testing_outs.keys():
-                self.comparison_traceback.append(bcolors.FAIL
-                                        + "missing key: TESTING %s != REFERENCE %s"
-                                        % (testing_outs.keys(), reference_outs.keys())
-                                        + bcolors.ENDC)
+                self.comparison_traceback.append(
+                    bcolors.FAIL
+                    + "missing key: TESTING %s != REFERENCE %s"
+                    % (testing_outs.keys(), reference_outs.keys())
+                    + bcolors.ENDC)
                 return False
 
             # Compare the large string from the corresponding dictionary entry
@@ -359,19 +373,22 @@ class IPyNbCell(pytest.Item):
                 # print testing_outs[key]
                 # print reference_outs[key]
 
-                self.comparison_traceback.append(bcolors.OKBLUE
-                                        + " mismatch '%s'\n" % key
-                                        + bcolors.FAIL
-                                        + "<<<<<<<<<<<< Reference output from ipynb file:"
-                                        + bcolors.ENDC)
+                self.comparison_traceback.append(
+                    bcolors.OKBLUE
+                    + " mismatch '%s'\n" % key
+                    + bcolors.FAIL
+                    + "<<<<<<<<<<<< Reference output from ipynb file:"
+                    + bcolors.ENDC)
                 self.comparison_traceback.append(_trim_base64(reference_outs[key]))
-                self.comparison_traceback.append(bcolors.FAIL
-                                        + '============ disagrees with newly computed (test) output:  '
-                                        + bcolors.ENDC)
+                self.comparison_traceback.append(
+                    bcolors.FAIL
+                    + '============ disagrees with newly computed (test) output:  '
+                    + bcolors.ENDC)
                 self.comparison_traceback.append(_trim_base64(testing_outs[str(key)]))
-                self.comparison_traceback.append(bcolors.FAIL
-                                        + '>>>>>>>>>>>>'
-                                        + bcolors.ENDC)
+                self.comparison_traceback.append(
+                    bcolors.FAIL
+                    + '>>>>>>>>>>>>'
+                    + bcolors.ENDC)
 
                 return False
         return True
@@ -398,7 +415,7 @@ class IPyNbCell(pytest.Item):
         # Timeout for the cell execution
         # after code is sent for execution, the kernel sends a message on
         # the shell channel. Timeout if no message received.
-        timeout = 2000
+        timeout = self.options.get('timeout', 20)
 
         # Poll the shell channel to get a message
         while True:
@@ -406,9 +423,10 @@ class IPyNbCell(pytest.Item):
                 msg = self.parent.get_kernel_message(stream='shell',
                                                      timeout=timeout)
             except Empty:
-                raise NbCellError("Timeout of %d seconds exceeded"
-                                  " executing cell: %s" (timeout,
-                                                         self.cell.input))
+                raise NbCellError(
+                    self.cell_num,
+                    "Timeout of %d seconds exceeded executing cell" % timeout,
+                    self.cell.source)
 
             # Is this the message we are waiting for?
             if msg['parent_header'].get('msg_id') == msg_id:
@@ -434,8 +452,10 @@ class IPyNbCell(pytest.Item):
             except Empty:
                 # This is not working: ! The code will not be checked
                 # if the time is out (when the cell stops to be executed?)
-                raise NbCellError("Timeout of %d seconds exceeded"
-                                  " waiting for output.")
+                raise NbCellError(
+                    self.cell_num,
+                    "Timeout of %d seconds exceeded waiting for output." % timeout,
+                    self.cell.source)
 
 
 
@@ -532,7 +552,7 @@ class IPyNbCell(pytest.Item):
                 # Store error in output first
                 out['ename'] = reply['ename']
                 out['evalue'] = reply['evalue']
-                # out['traceback'] = reply['traceback']
+                out['traceback'] = reply['traceback']
                 outs.append(out)
                 if not self.options['check_exception']:
                     traceback = '\n' + '\n'.join(reply['traceback'])

@@ -58,7 +58,10 @@ def test_print(filename, correctoutcome):
           .format(filename, correctoutcome))
     print("Command about to execute is '{}'".format(command))
 
-    exitcode = subprocess.call(command)
+    if os.name == 'nt':
+        exitcode = subprocess.call(command, shell=True)
+    else:
+        exitcode = subprocess.call(command)
 
     if correctoutcome is 'pass':
         assert exitcode is 0
