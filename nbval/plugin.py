@@ -124,6 +124,12 @@ def find_comment_markers(cellsource):
                 yield (comment_markers[comment], True)
 
 
+class Dummy:
+    """Needed to use xfail for our tests"""
+    def __init__(self):
+        self.__globals__ = {}
+
+
 class IPyNbFile(pytest.File):
     """
     This class represents a pytest collector object.
@@ -244,6 +250,8 @@ class IPyNbCell(pytest.Item):
         self.test_outputs = None
         self.options = options
         self.config = parent.parent.config
+        # _pytest.skipping assumes all pytest.Item have this attribute:
+        self.obj = Dummy()
 
     """ *****************************************************
         *****************  TESTING FUNCTIONS  ***************
