@@ -25,11 +25,22 @@ def test_timeouts(testdir):
 
     # Setup notebook to test:
     sources = [
+        # In [1]:
         "from time import sleep",
-        "for i in range(100000):\n    sleep(1)\nmyvar = 5",
+        # In [2]:
+        "for i in range(100000):\n" +
+        "    sleep(1)\n" +
+        "myvar = 5",
+        # In [3]:
         "a = 5",
+        # In [4]:
         "print(myvar)",
-        "for i in range(1000):\n    sleep(100)",
+        # In [5]:
+        "import signal\n" +
+        "signal.signal(signal.SIGINT, signal.SIG_IGN)\n" +
+        "for i in range(1000):\n" +
+        "    sleep(100)",
+        # In [6]:
         "b = 5",
     ]
     nb = _build_nb(sources)
