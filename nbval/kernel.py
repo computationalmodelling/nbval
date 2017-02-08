@@ -94,6 +94,11 @@ class RunningKernel(object):
         """
         return self.kc.execute(cell_input, allow_stdin=allow_stdin)
 
+    def is_alive(self):
+        if hasattr(self, 'km'):
+            return self.km.is_alive()
+        return False
+
     # These options are in case we wanted to restart the nb every time
     # it is executed a certain task
     def restart(self):
@@ -101,6 +106,13 @@ class RunningKernel(object):
         Instructs the kernel manager to restart the kernel process now.
         """
         self.km.restart_kernel(now=True)
+
+    def interrupt(self):
+        """
+        Instructs the kernel to stop whatever it is doing, and await
+        further commands.
+        """
+        self.km.interrupt_kernel()
 
     def stop(self):
         """
