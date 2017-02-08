@@ -6,6 +6,14 @@ import nbformat
 pytest_plugins = "pytester"
 
 
+def _build_nb(sources):
+    """Builds a notebook of only code cells, from a list of sources"""
+    nb = nbformat.v4.new_notebook()
+    for src in sources:
+        nb.cells.append(nbformat.v4.new_code_cell(src))
+    return nb
+
+
 def test_timeouts(testdir):
     # This test uses the testdir fixture from pytester, which is useful for
     # testing pytest plugins. It writes a notebook to a temporary dir
@@ -16,31 +24,15 @@ def test_timeouts(testdir):
     # content of the notebook
 
     # Setup notebook to test:
-    nb = nbformat.v4.new_notebook()
-
-    cell = nbformat.v4.new_code_cell(
-        "from time import sleep")
-    nb.cells.append(cell)
-
-    cell = nbformat.v4.new_code_cell(
-        "for i in range(100000):\n    sleep(1)\nmyvar = 5")
-    nb.cells.append(cell)
-
-    cell = nbformat.v4.new_code_cell(
-        "a = 5")
-    nb.cells.append(cell)
-
-    cell = nbformat.v4.new_code_cell(
-        "print(myvar)")
-    nb.cells.append(cell)
-
-    cell = nbformat.v4.new_code_cell(
-        "for i in range(1000):\n    sleep(100)")
-    nb.cells.append(cell)
-
-    cell = nbformat.v4.new_code_cell(
-        "b = 5")
-    nb.cells.append(cell)
+    sources = [
+        "from time import sleep",
+        "for i in range(100000):\n    sleep(1)\nmyvar = 5",
+        "a = 5",
+        "print(myvar)",
+        "for i in range(1000):\n    sleep(100)",
+        "b = 5",
+    ]
+    nb = _build_nb(sources)
 
     # Write notebook to test dir
     nbformat.write(nb, os.path.join(
