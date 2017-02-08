@@ -13,6 +13,8 @@ install:
   - unset VIRTUAL_ENV
   # Python 3.4 and 2.7 need six installed before running setup.py
   - pip install six
+  # Travis needs to update pip/setuptools
+  - pip install --upgrade setuptools pip
   - pip install .
   # have some tests using sympy
   - pip install sympy

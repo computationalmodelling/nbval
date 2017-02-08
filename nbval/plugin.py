@@ -10,6 +10,7 @@ import pytest
 import sys
 import re
 import hashlib
+import warnings
 from collections import OrderedDict, defaultdict
 
 # for python 3 compatibility
@@ -102,10 +103,15 @@ def pytest_collect_file(path, parent):
 
 
 comment_markers = {
-    'PYTEST_VALIDATE_IGNORE_OUTPUT': 'ignore',  # For backwards compatibility
-    'NBVAL_IGNORE_OUTPUT': 'ignore',
+    'PYTEST_VALIDATE_IGNORE_OUTPUT': ('check', False),  # For backwards compatibility
+    'NBVAL_IGNORE_OUTPUT': ('check', False),
     'NBVAL_CHECK_OUTPUT': 'check',
     'NBVAL_RAISES_EXCEPTION': 'check_exception',
+}
+
+metadata_tags = {
+    k.lower().replace('_', '-'): v
+    for (k, v) in comment_markers.items()
 }
 
 
@@ -114,6 +120,7 @@ def find_comment_markers(cellsource):
 
     Yield an iterable of ``(MARKER_TYPE, True)``.
     """
+    found = {}
     for line in cellsource.splitlines():
         line = line.strip()
         if line.startswith('#'):
@@ -121,7 +128,44 @@ def find_comment_markers(cellsource):
             comment = line.lstrip('#').strip()
             if comment in comment_markers:
                 # print("Found marker {}".format(comment))
-                yield (comment_markers[comment], True)
+                marker = comment_markers[comment]
+                if not isinstance(marker, tuple):
+                    # If not an explicit tuple ('option', True/False),
+                    # imply ('option', True)
+                    marker = (marker, True)
+                marker_type = marker[0]
+                if marker_type in found:
+                    warnings.warn(
+                        "Conflicting comment markers found, using the latest: "
+                        " %s VS %s" %
+                        (found[marker_type], comment))
+                found[marker_type] = comment
+                yield marker
+
+
+def find_metadata_tags(cell_metadata):
+    tags = cell_metadata.get('tags', None)
+    if tags is None:
+        return
+    elif not isinstance(tags, list):
+        warnings.warn("Cell tags is not a list, ignoring.")
+        return
+    found = {}
+    for tag in tags:
+        if tag in metadata_tags:
+            marker = metadata_tags[tag]
+            if not isinstance(marker, tuple):
+                # If not an explicit tuple ('option', True/False),
+                # imply ('option', True)
+                marker = (marker, True)
+            marker_type = marker[0]
+            if marker_type in found:
+                warnings.warn(
+                    "Conflicting metadata tags found, using the latest: "
+                    " %s VS %s" %
+                    (found[marker_type], tag))
+            found[marker_type] = tag
+            yield marker
 
 
 class Dummy:
@@ -169,8 +213,6 @@ class IPyNbFile(pytest.File):
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
-        with open('testkernel', 'w') as f:
-            f.write(kernel_name)
         self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
 
@@ -225,7 +267,22 @@ class IPyNbFile(pytest.File):
                 # The cell may contain a comment indicating that its output
                 # should be checked or ignored. If it doesn't, use the default
                 # behaviour. The --nbval option checks unmarked cells.
-                options = defaultdict(bool, find_comment_markers(cell.source))
+                with warnings.catch_warnings(record=True) as ws:
+                    options = defaultdict(bool, find_metadata_tags(cell.metadata))
+                    comment_opts = dict(find_comment_markers(cell.source))
+                    if set(comment_opts.keys()) & set(options.keys()):
+                        warnings.warn(
+                            "Overlapping options from comments and metadata, "
+                            "using options from comments: %s" %
+                            str(set(comment_opts.keys()) & set(options.keys())))
+                    for w in ws:
+                        self.parent.config.warn(
+                            "C1",
+                            w.message,
+                            '%s:Cell %d' % (
+                                getattr(self, "fspath", None),
+                                cell_num))
+                options.update(comment_opts)
                 options.setdefault('check', self.compare_outputs)
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
                                 cell, options)
@@ -557,7 +614,7 @@ class IPyNbCell(pytest.Item):
             # 'execution_count' number which does not seems useful
             # (we will filter it in the sanitize function)
             #
-            # When the reply is display_data or execute_count,
+            # When the reply is display_data or execute_result,
             # the dictionary contains
             # a 'data' sub-dictionary with the 'text' AND the 'image/png'
             # picture (in hexadecimal). There is also a 'metadata' entry
@@ -622,7 +679,7 @@ class IPyNbCell(pytest.Item):
         #     self.diff_number_outputs(outs, self.cell.outputs)
         #     failed = True
         failed = False
-        if self.options['check'] and not self.options['ignore']:
+        if self.options['check']:
             if not self.compare_outputs(outs, self.cell.outputs):
                 failed = True
 
@@ -673,9 +730,6 @@ class IPyNbCell(pytest.Item):
 
     def sanitize(self, s):
         """sanitize a string for comparison.
-
-        fix universal newlines, strip trailing newlines,
-        and normalize likely random values (memory addresses and UUIDs)
         """
         if not isinstance(s, six.string_types):
             return s

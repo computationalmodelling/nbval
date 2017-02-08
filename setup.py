@@ -14,7 +14,7 @@ setup(
         ]
     },
     install_requires = [
-        'pytest',
+        'pytest >= 2.8',
         'six',
         'jupyter_client',
         'nbformat',
