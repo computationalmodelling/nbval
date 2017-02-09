@@ -107,6 +107,7 @@ comment_markers = {
     'NBVAL_IGNORE_OUTPUT': ('check', False),
     'NBVAL_CHECK_OUTPUT': 'check',
     'NBVAL_RAISES_EXCEPTION': 'check_exception',
+    'NBVAL_SKIP': 'skip',
 }
 
 metadata_tags = {
@@ -489,6 +490,10 @@ class IPyNbCell(pytest.Item):
         output matches the output stored in the notebook.
 
         """
+        # Simply skip cell if configured to
+        if self.options['skip']:
+            pytest.skip()
+
         kernel = self.parent.kernel
         if not kernel.is_alive():
             raise NbCellError(
