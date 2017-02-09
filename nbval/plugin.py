@@ -97,7 +97,7 @@ def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
-    if path.fnmatch("*.ipynb"):
+    if parent.config.option.nbval and path.fnmatch("*.ipynb"):
         return IPyNbFile(path, parent)
 
 
