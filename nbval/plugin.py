@@ -483,6 +483,11 @@ class IPyNbCell(pytest.Item):
             )
             self.add_marker(xfail_mark)
 
+
+    def raise_cell_error(self, message, *args, **kwargs):
+        raise NbCellError(self.cell_num, message, self.cell.source, *args, **kwargs)
+
+
     def runtest(self):
         """
         Run test is called by pytest for each of these nodes that are
@@ -499,10 +504,7 @@ class IPyNbCell(pytest.Item):
 
         kernel = self.parent.kernel
         if not kernel.is_alive():
-            raise NbCellError(
-                self.cell_num,
-                "Kernel dead on test start",
-                self.cell.source)
+            raise RuntimeError("Kernel dead on test start")
 
         # Execute the code in the current cell in the kernel. Returns the
         # message id of the corresponding response from iopub.
@@ -527,6 +529,9 @@ class IPyNbCell(pytest.Item):
 
             # Is this the message we are waiting for?
             if msg['parent_header'].get('msg_id') == msg_id:
+                if msg['content']['status'] == 'aborted':
+                    # This should not occur!
+                    raise RuntimeError('Kernel aborted execution request')
                 break
             else:
                 continue
@@ -552,21 +557,18 @@ class IPyNbCell(pytest.Item):
                 # Halt kernel here!
                 kernel.stop()
                 if self.parent.timed_out:
-                    raise NbCellError(
-                        self.cell_num,
+                    self.raise_cell_error(
                         "Timeout of %g seconds exceeded while executing cell."
                         " Failed to interrupt kernel in %d seconds, so "
                         "failing without traceback." %
                             (timeout, output_timeout),
-                        self.cell.source
                     )
                 else:
                     self.parent.timed_out = True
-                    raise NbCellError(
-                        self.cell_num,
+                    self.raise_cell_error(
                         "Timeout of %d seconds exceeded waiting for output." %
                             output_timeout,
-                        self.cell.source)
+                    )
 
 
 
@@ -668,13 +670,10 @@ class IPyNbCell(pytest.Item):
                 if not self.options['check_exception']:
                     traceback = '\n' + '\n'.join(reply['traceback'])
                     if out['ename'] == 'KeyboardInterrupt' and self.parent.timed_out:
-                        raise NbCellError(
-                            self.cell_num,
-                            "Timeout of %g seconds exceeded executing cell" % timeout,
-                            self.cell.source)
+                        msg = "Timeout of %g seconds exceeded executing cell" % timeout
                     else:
-                        raise NbCellError(self.cell_num, "Cell execution caused an exception",
-                                          self.cell.source, traceback)
+                        msg = "Cell execution caused an exception"
+                    self.raise_cell_error(msg, traceback)
 
             # any other message type is not expected
             # should this raise an error?
@@ -695,11 +694,12 @@ class IPyNbCell(pytest.Item):
         if failed:
             # The traceback containing the difference in the outputs is
             # stored in the variable comparison_traceback
-            raise NbCellError(self.cell_num,
-                              "Cell outputs differ",
-                              self.cell.source,
-                              # Here we must put the traceback output:
-                              '\n'.join(self.comparison_traceback))
+            self.raise_cell_error(
+                "Cell outputs differ",
+                # Here we must put the traceback output:
+                '\n'.join(self.comparison_traceback),
+            )
+
 
     def sanitize_outputs(self, outputs, skip_sanitize=('metadata',
                                                        'traceback',
