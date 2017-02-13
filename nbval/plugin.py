@@ -533,6 +533,7 @@ class IPyNbCell(pytest.Item):
         # after code is sent for execution, the kernel sends a message on
         # the shell channel. Timeout if no message received.
         timeout = self.config.option.nbval_cell_timeout
+        timed_out_this_run = False
 
         # Poll the shell channel to get a message
         while True:
@@ -543,6 +544,7 @@ class IPyNbCell(pytest.Item):
                 # Try to interrupt kernel, as this will give us traceback:
                 kernel.interrupt()
                 self.parent.timed_out = True
+                timed_out_this_run = True
                 break
 
             # Is this the message we are waiting for?
@@ -573,7 +575,7 @@ class IPyNbCell(pytest.Item):
                 # if the time is out (when the cell stops to be executed?)
                 # Halt kernel here!
                 kernel.stop()
-                if self.parent.timed_out:
+                if timed_out_this_run:
                     self.raise_cell_error(
                         "Timeout of %g seconds exceeded while executing cell."
                         " Failed to interrupt kernel in %d seconds, so "
