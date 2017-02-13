@@ -92,7 +92,7 @@ class RunningKernel(object):
         Function returns a unique message id of the reply from
         the kernel.
         """
-        return self.kc.execute(cell_input, allow_stdin=allow_stdin)
+        return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
 
     def is_alive(self):
         if hasattr(self, 'km'):
