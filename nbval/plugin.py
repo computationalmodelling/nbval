@@ -542,7 +542,7 @@ class IPyNbCell(pytest.Item):
         self.test_outputs = outs
 
         # Now get the outputs from the iopub channel, need smaller timeout
-        output_timeout = 10
+        output_timeout = 5
         while True:
             # The iopub channel broadcasts a range of messages. We keep reading
             # them until we find the message containing the side-effects of our
