@@ -5,6 +5,8 @@ Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 
 """
 
+from __future__ import print_function
+
 # import the pytest API
 import pytest
 import sys
@@ -97,7 +99,8 @@ def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
-    if parent.config.option.nbval and path.fnmatch("*.ipynb"):
+    opt = parent.config.option
+    if (opt.nbval or opt.nbval_lax) and path.fnmatch("*.ipynb"):
         return IPyNbFile(path, parent)
 
 
