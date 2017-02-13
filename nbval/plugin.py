@@ -311,6 +311,7 @@ class IPyNbCell(pytest.Item):
         self.test_outputs = None
         self.options = options
         self.config = parent.parent.config
+        self.output_timeout = 5
         # _pytest.skipping assumes all pytest.Item have this attribute:
         self.obj = Dummy()
 
@@ -484,6 +485,23 @@ class IPyNbCell(pytest.Item):
             self.add_marker(xfail_mark)
 
 
+    def await_idle(self, parent_id):
+        """Poll the iopub stream until an idle message is received for the given parent ID"""
+        while True:
+            try:
+                # Get a message from the kernel iopub channel
+                msg = self.parent.get_kernel_message(timeout=self.output_timeout)
+
+            except Empty:
+                self.parent.kernel.stop()
+                raise RuntimeError('Timed out waiting for idle kernel!')
+            if msg['parent_header'].get('msg_id') != parent_id:
+                continue
+            if msg['msg_type'] == 'status':
+                if msg['content']['execution_state'] == 'idle':
+                    break
+
+
     def raise_cell_error(self, message, *args, **kwargs):
         raise NbCellError(self.cell_num, message, self.cell.source, *args, **kwargs)
 
@@ -541,15 +559,14 @@ class IPyNbCell(pytest.Item):
         # TODO: Only store if comparing with nbdime, to save on memory usage
         self.test_outputs = outs
 
-        # Now get the outputs from the iopub channel, need smaller timeout
-        output_timeout = 5
+        # Now get the outputs from the iopub channel
         while True:
             # The iopub channel broadcasts a range of messages. We keep reading
             # them until we find the message containing the side-effects of our
             # code execution.
             try:
                 # Get a message from the kernel iopub channel
-                msg = self.parent.get_kernel_message(timeout=output_timeout)
+                msg = self.parent.get_kernel_message(timeout=self.output_timeout)
 
             except Empty:
                 # This is not working: ! The code will not be checked
@@ -561,13 +578,13 @@ class IPyNbCell(pytest.Item):
                         "Timeout of %g seconds exceeded while executing cell."
                         " Failed to interrupt kernel in %d seconds, so "
                         "failing without traceback." %
-                            (timeout, output_timeout),
+                            (timeout, self.output_timeout),
                     )
                 else:
                     self.parent.timed_out = True
                     self.raise_cell_error(
                         "Timeout of %d seconds exceeded waiting for output." %
-                            output_timeout,
+                            self.output_timeout,
                     )
 
 
@@ -668,6 +685,8 @@ class IPyNbCell(pytest.Item):
                 out['traceback'] = reply['traceback']
                 outs.append(out)
                 if not self.options['check_exception']:
+                    # Ensure we flush iopub before raising error
+                    self.await_idle(msg_id)
                     traceback = '\n' + '\n'.join(reply['traceback'])
                     if out['ename'] == 'KeyboardInterrupt' and self.parent.timed_out:
                         msg = "Timeout of %g seconds exceeded executing cell" % timeout
