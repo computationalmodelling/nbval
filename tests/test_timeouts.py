@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 import nbformat
 
 
@@ -50,7 +52,7 @@ def test_timeouts(testdir):
         str(testdir.tmpdir), 'test_timeouts.ipynb'))
 
     # Run tests
-    result = testdir.inline_run('--nbval', '--current-env', '--nbval-cell-timeout', '5')
+    result = testdir.inline_run('--nbval', '--current-env', '--nbval-cell-timeout', '5', '-s')
     reports = result.getreports('pytest_runtest_logreport')
 
     # Setup and teardown of cells should have no issues:
@@ -63,13 +65,16 @@ def test_timeouts(testdir):
     assert len(reports) == 6
 
     # Import cell should pass:
-    assert reports[0].passed
+    if not reports[0].passed:
+        pytest.fail("Inner exception: %s" % reports[0].longreprtext)
 
     # First timeout cell should fail, unexpectedly
     assert reports[1].failed and not hasattr(reports[1], 'wasxfail')
 
     # Normal cell after timeout should pass, but be expected to fail
-    assert reports[2].passed and hasattr(reports[2], 'wasxfail')
+    if not reports[2].passed:
+        pytest.fail("Inner exception: %s" % reports[2].longreprtext)
+    assert hasattr(reports[2], 'wasxfail')
 
     # Cell trying to access variable declare after loop in timeout
     # should fail, expectedly (marked skipped)

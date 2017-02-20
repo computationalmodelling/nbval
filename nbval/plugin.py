@@ -311,6 +311,7 @@ class IPyNbCell(pytest.Item):
         self.test_outputs = None
         self.options = options
         self.config = parent.parent.config
+        self.output_timeout = 5
         # _pytest.skipping assumes all pytest.Item have this attribute:
         self.obj = Dummy()
 
@@ -483,6 +484,28 @@ class IPyNbCell(pytest.Item):
             )
             self.add_marker(xfail_mark)
 
+
+    def await_idle(self, parent_id):
+        """Poll the iopub stream until an idle message is received for the given parent ID"""
+        while True:
+            try:
+                # Get a message from the kernel iopub channel
+                msg = self.parent.get_kernel_message(timeout=self.output_timeout)
+
+            except Empty:
+                self.parent.kernel.stop()
+                raise RuntimeError('Timed out waiting for idle kernel!')
+            if msg['parent_header'].get('msg_id') != parent_id:
+                continue
+            if msg['msg_type'] == 'status':
+                if msg['content']['execution_state'] == 'idle':
+                    break
+
+
+    def raise_cell_error(self, message, *args, **kwargs):
+        raise NbCellError(self.cell_num, message, self.cell.source, *args, **kwargs)
+
+
     def runtest(self):
         """
         Run test is called by pytest for each of these nodes that are
@@ -499,10 +522,7 @@ class IPyNbCell(pytest.Item):
 
         kernel = self.parent.kernel
         if not kernel.is_alive():
-            raise NbCellError(
-                self.cell_num,
-                "Kernel dead on test start",
-                self.cell.source)
+            raise RuntimeError("Kernel dead on test start")
 
         # Execute the code in the current cell in the kernel. Returns the
         # message id of the corresponding response from iopub.
@@ -513,6 +533,7 @@ class IPyNbCell(pytest.Item):
         # after code is sent for execution, the kernel sends a message on
         # the shell channel. Timeout if no message received.
         timeout = self.config.option.nbval_cell_timeout
+        timed_out_this_run = False
 
         # Poll the shell channel to get a message
         while True:
@@ -523,10 +544,14 @@ class IPyNbCell(pytest.Item):
                 # Try to interrupt kernel, as this will give us traceback:
                 kernel.interrupt()
                 self.parent.timed_out = True
+                timed_out_this_run = True
                 break
 
             # Is this the message we are waiting for?
             if msg['parent_header'].get('msg_id') == msg_id:
+                if msg['content']['status'] == 'aborted':
+                    # This should not occur!
+                    raise RuntimeError('Kernel aborted execution request')
                 break
             else:
                 continue
@@ -536,37 +561,33 @@ class IPyNbCell(pytest.Item):
         # TODO: Only store if comparing with nbdime, to save on memory usage
         self.test_outputs = outs
 
-        # Now get the outputs from the iopub channel, need smaller timeout
-        output_timeout = 10
+        # Now get the outputs from the iopub channel
         while True:
             # The iopub channel broadcasts a range of messages. We keep reading
             # them until we find the message containing the side-effects of our
             # code execution.
             try:
                 # Get a message from the kernel iopub channel
-                msg = self.parent.get_kernel_message(timeout=output_timeout)
+                msg = self.parent.get_kernel_message(timeout=self.output_timeout)
 
             except Empty:
                 # This is not working: ! The code will not be checked
                 # if the time is out (when the cell stops to be executed?)
                 # Halt kernel here!
                 kernel.stop()
-                if self.parent.timed_out:
-                    raise NbCellError(
-                        self.cell_num,
+                if timed_out_this_run:
+                    self.raise_cell_error(
                         "Timeout of %g seconds exceeded while executing cell."
                         " Failed to interrupt kernel in %d seconds, so "
                         "failing without traceback." %
-                            (timeout, output_timeout),
-                        self.cell.source
+                            (timeout, self.output_timeout),
                     )
                 else:
                     self.parent.timed_out = True
-                    raise NbCellError(
-                        self.cell_num,
+                    self.raise_cell_error(
                         "Timeout of %d seconds exceeded waiting for output." %
-                            output_timeout,
-                        self.cell.source)
+                            self.output_timeout,
+                    )
 
 
 
@@ -666,15 +687,14 @@ class IPyNbCell(pytest.Item):
                 out['traceback'] = reply['traceback']
                 outs.append(out)
                 if not self.options['check_exception']:
+                    # Ensure we flush iopub before raising error
+                    self.await_idle(msg_id)
                     traceback = '\n' + '\n'.join(reply['traceback'])
                     if out['ename'] == 'KeyboardInterrupt' and self.parent.timed_out:
-                        raise NbCellError(
-                            self.cell_num,
-                            "Timeout of %g seconds exceeded executing cell" % timeout,
-                            self.cell.source)
+                        msg = "Timeout of %g seconds exceeded executing cell" % timeout
                     else:
-                        raise NbCellError(self.cell_num, "Cell execution caused an exception",
-                                          self.cell.source, traceback)
+                        msg = "Cell execution caused an exception"
+                    self.raise_cell_error(msg, traceback)
 
             # any other message type is not expected
             # should this raise an error?
@@ -695,11 +715,12 @@ class IPyNbCell(pytest.Item):
         if failed:
             # The traceback containing the difference in the outputs is
             # stored in the variable comparison_traceback
-            raise NbCellError(self.cell_num,
-                              "Cell outputs differ",
-                              self.cell.source,
-                              # Here we must put the traceback output:
-                              '\n'.join(self.comparison_traceback))
+            self.raise_cell_error(
+                "Cell outputs differ",
+                # Here we must put the traceback output:
+                '\n'.join(self.comparison_traceback),
+            )
+
 
     def sanitize_outputs(self, outputs, skip_sanitize=('metadata',
                                                        'traceback',

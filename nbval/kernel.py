@@ -6,6 +6,13 @@ Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 """
 
 import os
+import logging
+from pprint import pformat
+
+try:
+    from Queue import Empty
+except:
+    from queue import Empty
 
 # Kernel for jupyter notebooks
 from jupyter_client.manager import KernelManager
@@ -14,6 +21,11 @@ import ipykernel.kernelspec
 
 
 CURRENT_ENV_KERNEL_NAME = ':nbval-parent-env'
+
+logger = logging.getLogger('nbval')
+# Uncomment to debug kernel communication:
+# logger.setLevel('DEBUG')
+# logging.basicConfig(format="[%(asctime)s - %(name)s - %(levelname)s] %(message)s")
 
 
 class NbvalKernelspecManager(KernelSpecManager):
@@ -35,6 +47,7 @@ class NbvalKernelspecManager(KernelSpecManager):
 
 def start_new_kernel(startup_timeout=60, kernel_name='python', **kwargs):
     """Start a new kernel, and return its Manager and Client"""
+    logger.debug('Starting new kernel: "%s"' % kernel_name)
     km = KernelManager(kernel_name=kernel_name,
                        kernel_spec_manager=NbvalKernelspecManager())
     km.start_kernel(**kwargs)
@@ -43,6 +56,7 @@ def start_new_kernel(startup_timeout=60, kernel_name='python', **kwargs):
     try:
         kc.wait_for_ready(timeout=startup_timeout)
     except RuntimeError:
+        logger.exception('Failure starting kernel "%s"', kernel_name)
         kc.stop_channels()
         km.shutdown_kernel()
         raise
@@ -78,10 +92,18 @@ class RunningKernel(object):
         Timeout is None by default
         When timeout is reached
         """
-        if stream == 'iopub':
-            return self.kc.get_iopub_msg(timeout=timeout)
-        elif stream == 'shell':
-            return self.kc.get_shell_msg(timeout=timeout)
+        try:
+            if stream == 'iopub':
+                msg = self.kc.get_iopub_msg(timeout=timeout)
+            elif stream == 'shell':
+                msg = self.kc.get_shell_msg(timeout=timeout)
+            else:
+                raise ValueError('Invalid stream specified: "%s"' % stream)
+        except Empty:
+            logger.debug('Kernel: Timeout waiting for message on %s' % stream)
+            raise
+        logger.debug("Kernel message (%s):\n%s" % (stream, pformat(msg)))
+        return msg
 
     def execute_cell_input(self, cell_input, allow_stdin=None):
         """
@@ -92,7 +114,11 @@ class RunningKernel(object):
         Function returns a unique message id of the reply from
         the kernel.
         """
-        return self.kc.execute(cell_input, allow_stdin=allow_stdin)
+        if cell_input:
+            logger.debug('Executing cell: "%s"...' % (cell_input.splitlines()[0][:40]))
+        else:
+            logger.debug('Executing empty cell')
+        return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
 
     def is_alive(self):
         if hasattr(self, 'km'):
@@ -105,6 +131,7 @@ class RunningKernel(object):
         """
         Instructs the kernel manager to restart the kernel process now.
         """
+        logger.debug('Restarting kernel')
         self.km.restart_kernel(now=True)
 
     def interrupt(self):
@@ -112,6 +139,7 @@ class RunningKernel(object):
         Instructs the kernel to stop whatever it is doing, and await
         further commands.
         """
+        logger.debug('Interrupting kernel')
         self.km.interrupt_kernel()
 
     def stop(self):
@@ -119,6 +147,7 @@ class RunningKernel(object):
         Instructs the kernel process to stop channels
         and the kernel manager to then shutdown the process.
         """
+        logger.debug('Stopping kernel')
         self.kc.stop_channels()
         self.km.shutdown_kernel(now=True)
         del self.km
