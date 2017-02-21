@@ -291,8 +291,8 @@ class IPyNbFile(pytest.File):
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
                                 cell, options)
 
-            # Update 'code' cell count
-            cell_num += 1
+                # Update 'code' cell count
+                cell_num += 1
 
     def teardown(self):
         if self.kernel is not None and self.kernel.is_alive():
