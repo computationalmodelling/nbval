@@ -536,25 +536,13 @@ class IPyNbCell(pytest.Item):
         timed_out_this_run = False
 
         # Poll the shell channel to get a message
-        while True:
-            try:
-                msg = self.parent.get_kernel_message(stream='shell',
-                                                     timeout=timeout)
-            except Empty:
-                # Try to interrupt kernel, as this will give us traceback:
-                kernel.interrupt()
-                self.parent.timed_out = True
-                timed_out_this_run = True
-                break
-
-            # Is this the message we are waiting for?
-            if msg['parent_header'].get('msg_id') == msg_id:
-                if msg['content']['status'] == 'aborted':
-                    # This should not occur!
-                    raise RuntimeError('Kernel aborted execution request')
-                break
-            else:
-                continue
+        try:
+            self.parent.kernel.await_idle(msg_id, timeout=timeout)
+        except Empty:  # Timeout reached
+            # Try to interrupt kernel, as this will give us traceback:
+            kernel.interrupt()
+            self.parent.timed_out = True
+            timed_out_this_run = True
 
         # This list stores the output information for the entire cell
         outs = []

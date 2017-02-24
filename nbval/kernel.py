@@ -120,6 +120,27 @@ class RunningKernel(object):
             logger.debug('Executing empty cell')
         return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
 
+
+    def await_idle(self, msg_id, timeout=None):
+        """
+        Continuously poll the kernel 'shell' stream for messages until:
+         - It receives an 'idle' status for the given message id
+         - The timeout is reached awaiting a message, in which case
+           a `Queue.Empty` exception will be raised.
+        """
+        while True:
+            msg = self.get_message(stream='shell', timeout=timeout)
+
+            # Is this the message we are waiting for?
+            if msg['parent_header'].get('msg_id') == msg_id:
+                if msg['content']['status'] == 'aborted':
+                    # This should not occur!
+                    raise RuntimeError('Kernel aborted execution request')
+                return
+            else:
+                continue
+
+
     def is_alive(self):
         if hasattr(self, 'km'):
             return self.km.is_alive()
