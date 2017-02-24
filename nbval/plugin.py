@@ -29,6 +29,7 @@ from nbformat import NotebookNode
 
 # Kernel for running notebooks
 from .kernel import RunningKernel, CURRENT_ENV_KERNEL_NAME
+from .cover import setup_coverage, teardown_coverage
 
 
 # define colours for pretty outputs
@@ -219,6 +220,8 @@ class IPyNbFile(pytest.File):
                 'kernelspec', {}).get('name', 'python')
         self.kernel = RunningKernel(kernel_name)
         self.setup_sanitize_files()
+        if getattr(self.parent.config.option, 'cov_source', None):
+            setup_coverage(self.parent.config, self.kernel, getattr(self, "fspath", None))
 
 
     def setup_sanitize_files(self):
@@ -296,6 +299,8 @@ class IPyNbFile(pytest.File):
 
     def teardown(self):
         if self.kernel is not None and self.kernel.is_alive():
+            if getattr(self.parent.config.option, 'cov_source', None):
+                teardown_coverage(self.parent.config, self.kernel)
             self.kernel.stop()
 
 
