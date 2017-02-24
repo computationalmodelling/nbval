@@ -151,3 +151,9 @@ class RunningKernel(object):
         self.kc.stop_channels()
         self.km.shutdown_kernel(now=True)
         del self.km
+
+    @property
+    def language(self):
+        if self.km.kernel_spec is None:
+            return None
+        return self.km.kernel_spec.language
