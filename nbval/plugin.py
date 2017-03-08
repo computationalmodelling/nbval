@@ -196,8 +196,7 @@ class IPyNbFile(pytest.File):
             'traceback',
             #'text/latex',
             'prompt_number',
-            'stdout',
-            'stream',
+            'output_type',
             'name',
             'execution_count',
         )
@@ -349,85 +348,50 @@ class IPyNbCell(pytest.Item):
         # Use stored skips unless passed a specific value
         skip_compare = skip_compare or self.parent.skip_compare
 
-        # For every different key, we will store the outputs in a
-        # single string, in a dictionary with the same keys
-        # At the end, every dictionary entry will be compared
-        # We skip the unimportant keys in the 'skip_compare' list
-        #
-        # We concatenate the outputs because the ipython notebook produces
-        # them in a random number of dictionaries. So, it is easier
-        # to compare only one chunk of data
-        testing_outs = defaultdict(str)
-        reference_outs = defaultdict(str)
+        test = transform_streams_for_comparison(test)
+        ref = transform_streams_for_comparison(ref)
 
-        # Check the references (embedded notebook outputs)
-        # and start appendind the outputs for every
-        # different key. The entries of every output have the structure:
+        # We reformat outputs into a dictionaries where
+        # key:
+        #   - all keys on output except 'data' and those in skip_compare
+        #   - all keys on 'data' except those in skip_compare, i.e. data is flattened
+        # value:
+        #   - list of all corresponding values for that key, i.e. for all outputs
         #
-        # {'output_type': 'stream', 'stream': 'stdout',
-        #  'text': "The time is: 11:44:21\nToday's date is: 13/03/15\n"}
-        #
-        # We discard the keys from the skip_compare list
+        # This format allows to disregard the relative order of dissimilar
+        # output keys, while still caring about the order of those that share
+        # a key.
+        testing_outs = defaultdict(list)
+        reference_outs = defaultdict(list)
+
         for reference in ref:
             for key in reference.keys():
+                # We discard the keys from the skip_compare list:
                 if key not in skip_compare:
-
-                    # In the EXECUTION, we already processed the display_data
-                    # (or execute_count)
-                    # kind of dictionary entries. display_data has a 'data'
-                    # sub dictionary which contains the relevant information
-                    # about the Figure: 'text/plain', 'image/png', ...
-                    #
-                    # EXAMPLES:
-                    #
-                    # display_data type:
-                    # {'output_type': 'display_data', 'image/png': 'iVBORw0...
-                    #  'text/plain': <matplotlib.figure.Figure at 0x7f9ca97cc890>
-                    #  'metadata': {} }
-                    #
-                    #
-                    # Hence, we look into these sub dictionary entries and
-                    # append them to the corresponding dictionary entry
-                    # in the reference outputs
-                    #
+                    # Flatten out MIME types from data of display_data and execute_result
                     if key == 'data':
                         for data_key in reference[key].keys():
-                            # Filter the keys in the SUB-dictionary again
+                            # Filter the keys in the SUB-dictionary again:
                             if data_key not in skip_compare:
-                                reference_outs[data_key] += self.sanitize(reference[key][data_key])
-
-
-                    # NOTICE: that execute_result (similar for figures than
-                    # display_data but without the png or picture hex)
-                    # has an 'execution_count' key
-                    # which we skip because is not relevant for now.
-                    # We could use this in the future if we wanted executions
-                    # in the same order than the reference
-                    #
-                    # execute_result type:
-                    # {'output_type': 'execute_result', 'execution_count': 9,
-                    #  'text/plain': '<matplotlib.image.AxesImage at 0x7f9ca8f058d0>',
-                    #  'metadata': {}}
+                                reference_outs[data_key].append(self.sanitize(reference[key][data_key]))
 
                     # Otherwise, just create a normal dictionary entry from
                     # one of the keys of the dictionary
                     else:
                         # Create the dictionary entries on the fly, from the
                         # existing ones to be compared
-                        reference_outs[key] += self.sanitize(reference[key])
+                        reference_outs[key].append(self.sanitize(reference[key]))
 
         # the same for the testing outputs (the cells that are being executed)
-        # display_data cells were already processed! (see the execution loop)
         for testing in test:
             for key in testing.keys():
                 if key not in skip_compare:
                     if key == 'data':
                         for data_key in testing[key].keys():
-                            # Filter the keys in the SUB-dictionary again
                             if data_key not in skip_compare:
-                                testing_outs[data_key] += self.sanitize(testing[key][data_key])
+                                testing_outs[data_key].append(self.sanitize(testing[key][data_key]))
                     else:
-                        testing_outs[key] += self.sanitize(testing[key])
+                        testing_outs[key].append(self.sanitize(testing[key]))
 
         # The traceback from the comparison will be stored here.
         self.comparison_traceback = []
@@ -443,32 +407,55 @@ class IPyNbCell(pytest.Item):
                     + bcolors.ENDC)
                 return False
 
-            # Compare the large string from the corresponding dictionary entry
+            # Get output values for dictionary entries.
             # We use str() to be sure that the unicode key strings from the
-            # reference are also read from the testing dictionary
-            if testing_outs[str(key)] != reference_outs[key]:
-
-                # print testing_outs[key]
-                # print reference_outs[key]
-
+            # reference are also read from the testing dictionary:
+            test_values = testing_outs[str(key)]
+            ref_values = reference_outs[key]
+            if len(test_values) != len(ref_values):
+                # The number of outputs for a specific MIME type differs
                 self.comparison_traceback.append(
                     bcolors.OKBLUE
-                    + " mismatch '%s'\n" % key
+                    + 'dissimilar number of outputs for key "%s"' % key
                     + bcolors.FAIL
-                    + "<<<<<<<<<<<< Reference output from ipynb file:"
-                    + bcolors.ENDC)
-                self.comparison_traceback.append(_trim_base64(reference_outs[key]))
+                    + "<<<<<<<<<<<< Reference outputs from ipynb file:"
+                    + bcolors.ENDC
+                )
+                for val in ref_values:
+                    self.comparison_traceback.append(_trim_base64(val))
                 self.comparison_traceback.append(
                     bcolors.FAIL
-                    + '============ disagrees with newly computed (test) output:  '
+                    + '============ disagrees with newly computed (test) output:'
                     + bcolors.ENDC)
-                self.comparison_traceback.append(_trim_base64(testing_outs[str(key)]))
+                for val in test_values:
+                    self.comparison_traceback.append(_trim_base64(val))
                 self.comparison_traceback.append(
                     bcolors.FAIL
                     + '>>>>>>>>>>>>'
                     + bcolors.ENDC)
-
                 return False
+
+            for test_out, ref_out in zip(test_values, ref_values):
+                # Compare the individual values
+                if test_out != ref_out:
+                    self.comparison_traceback.append(
+                        bcolors.OKBLUE
+                        + " mismatch '%s'\n" % key
+                        + bcolors.FAIL
+                        + "<<<<<<<<<<<< Reference output from ipynb file:"
+                        + bcolors.ENDC)
+                    self.comparison_traceback.append(_trim_base64(ref_out))
+                    self.comparison_traceback.append(
+                        bcolors.FAIL
+                        + '============ disagrees with newly computed (test) output:'
+                        + bcolors.ENDC)
+                    self.comparison_traceback.append(_trim_base64(test_out))
+                    self.comparison_traceback.append(
+                        bcolors.FAIL
+                        + '>>>>>>>>>>>>'
+                        + bcolors.ENDC)
+
+                    return False
         return True
 
 
@@ -653,17 +640,7 @@ class IPyNbCell(pytest.Item):
             # to obtain the 'text' and 'image/png' information
             elif msg_type in ('display_data', 'execute_result'):
                 out['metadata'] = reply['metadata']
-                out['data'] = {}
-                for mime, data in six.iteritems(reply['data']):
-                    # This could be useful for reference or backward compatibility
-                    #     attr = mime.split('/')[-1].lower()
-                    #     attr = attr.replace('+xml', '').replace('plain', 'text')
-                    #     setattr(out, attr, data)
-
-                    # Return the relevant entries from data:
-                    # plain/text, image/png, execution_count, etc
-                    # We could use a mime types list for this (MAYBE)
-                    out.data[mime] = data
+                out['data'] = reply['data']
                 outs.append(out)
 
                 if msg_type == 'execute_result':
@@ -672,7 +649,7 @@ class IPyNbCell(pytest.Item):
 
             # if the message is a stream then we store the output
             elif msg_type == 'stream':
-                out.stream = reply['name']
+                out.name = reply['name']
                 out.text = reply['text']
                 outs.append(out)
 
@@ -701,6 +678,8 @@ class IPyNbCell(pytest.Item):
             else:
                 print("unhandled iopub msg:", msg_type)
 
+        outs[:] = coalesce_streams(outs)
+
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
         # if len(outs) != len(self.cell.outputs):
@@ -708,7 +687,7 @@ class IPyNbCell(pytest.Item):
         #     failed = True
         failed = False
         if self.options['check']:
-            if not self.compare_outputs(outs, self.cell.outputs):
+            if not self.compare_outputs(outs, coalesce_streams(self.cell.outputs)):
                 failed = True
 
         # If the comparison failed then we raise an exception.
@@ -726,8 +705,6 @@ class IPyNbCell(pytest.Item):
                                                        'traceback',
                                                        'text/latex',
                                                        'prompt_number',
-                                                       'stdout',
-                                                       'stream',
                                                        'output_type',
                                                        'name',
                                                        'execution_count'
@@ -772,6 +749,64 @@ class IPyNbCell(pytest.Item):
         for regex, replace in six.iteritems(self.parent.sanitize_patterns):
             s = re.sub(regex, replace, s)
         return s
+
+
+carriagereturn_pat = re.compile(r'.*\r(?=[^\n])')
+backspace_pat = re.compile(r'[^\n]\b')
+
+
+def coalesce_streams(outputs):
+    """
+    Merge all stream outputs with shared names into single streams
+    to ensure deterministic outputs.
+
+    Parameters
+    ----------
+    outputs : iterable of NotebookNodes
+        Outputs being processed
+    """
+    if not outputs:
+        return outputs
+
+    new_outputs = []
+    streams = {}
+    for output in outputs:
+        if (output.output_type == 'stream'):
+            if output.name in streams:
+                streams[output.name].text += output.text
+            else:
+                new_outputs.append(output)
+                streams[output.name] = output
+        else:
+            new_outputs.append(output)
+
+    # process \r and \b characters
+    for output in streams.values():
+        backspace_pat
+        old = output.text
+        while len(output.text) < len(old):
+            old = output.text
+            # Cancel out anything-but-newline followed by backspace
+            output.text = backspace_pat.sub('', output.text)
+        # Replace all carriage returns not followed by newline
+        output.text = carriagereturn_pat.sub('', output.text)
+
+    return new_outputs
+
+
+def transform_streams_for_comparison(outputs):
+    """Makes failure output for streams better by having key be the stream name"""
+    new_outputs = []
+    for output in outputs:
+        if (output.output_type == 'stream'):
+            # Transform output
+            new_outputs.append({
+                'output_type': 'stream',
+                output.name: output.text,
+            })
+        else:
+            new_outputs.append(output)
+    return new_outputs
 
 
 def get_sanitize_patterns(string):
