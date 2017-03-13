@@ -137,8 +137,6 @@ class RunningKernel(object):
                     # This should not occur!
                     raise RuntimeError('Kernel aborted execution request')
                 return
-            else:
-                continue
 
 
     def is_alive(self):
