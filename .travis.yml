@@ -20,6 +20,8 @@ install:
   - pip install sympy
   # and some use matplotlib
   - pip install matplotlib
+  # and coverage
+  - pip install pytest-cov
 
 # command to run tests
 script: make test

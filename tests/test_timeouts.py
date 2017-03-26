@@ -1,19 +1,13 @@
 import os
 
+import nbformat
+
 import pytest
 
-import nbformat
+from utils import build_nb
 
 
 pytest_plugins = "pytester"
-
-
-def _build_nb(sources):
-    """Builds a notebook of only code cells, from a list of sources"""
-    nb = nbformat.v4.new_notebook()
-    for src in sources:
-        nb.cells.append(nbformat.v4.new_code_cell(src))
-    return nb
 
 
 def test_timeouts(testdir):
@@ -45,7 +39,7 @@ def test_timeouts(testdir):
         # In [6]:
         "b = 5",
     ]
-    nb = _build_nb(sources)
+    nb = build_nb(sources)
 
     # Write notebook to test dir
     nbformat.write(nb, os.path.join(
@@ -83,4 +77,3 @@ def test_timeouts(testdir):
     # Second timeout loop should fail, expectedly, and cause all following to fail
     assert reports[4].skipped and hasattr(reports[4], 'wasxfail')
     assert reports[5].skipped and hasattr(reports[5], 'wasxfail')
-
