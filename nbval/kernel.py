@@ -75,16 +75,18 @@ class RunningKernel(object):
     this class.
 
     """
-    def __init__(self, kernel_name):
+    def __init__(self, kernel_name, cwd=None):
         """
         Initialise a new kernel
-        specfiy that matplotlib is inline and connect the stderr.
+        specify that matplotlib is inline and connect the stderr.
         Stores the active kernel process and its manager.
         """
 
         self.km, self.kc = start_new_kernel(
             kernel_name=kernel_name,
-            stderr=open(os.devnull, 'w'))
+            stderr=open(os.devnull, 'w'),
+            cwd=cwd,
+        )
 
     def get_message(self, stream, timeout=None):
         """

@@ -217,7 +217,7 @@ class IPyNbFile(pytest.File):
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
-        self.kernel = RunningKernel(kernel_name)
+        self.kernel = RunningKernel(kernel_name, str(self.fspath.dirname))
         self.setup_sanitize_files()
         if getattr(self.parent.config.option, 'cov_source', None):
             setup_coverage(self.parent.config, self.kernel, getattr(self, "fspath", None))
