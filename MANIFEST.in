@@ -1,6 +1,6 @@
 include LICENSE
 include documentation.ipynb
-include README.md
+include README.rst
 include Makefile
 graft tests
 
