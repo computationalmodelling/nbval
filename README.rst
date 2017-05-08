@@ -20,7 +20,7 @@ See ``documentation.ipynb`` for the full documentation.
 Installation
 ------------
 
-Available on PyPi:
+Available on PyPI:
 
 ::
 
