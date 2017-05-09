@@ -16,4 +16,4 @@ release: build-dists
 
 
 install-test-deps:
-	pip install matplotlib sympy docutils pytest-cov
+	pip install matplotlib sympy docutils pygments pytest-cov
