@@ -1,27 +1,15 @@
+sudo: false
 language: python
-
 python:
   - "nightly"
   - "3.6"
   - "3.5"
   - "3.4"
   - "2.7"
-
 install:
-  # We do this conditionally because it saves us some downloading if the
-  # version is the same.
-  - unset VIRTUAL_ENV
-  # Python 3.4 and 2.7 need six installed before running setup.py
-  - pip install six
-  # Travis needs to update pip/setuptools
-  - pip install --upgrade setuptools pip
+  - pip install --upgrade setuptools pip wheel
   - pip install .
-  # have some tests using sympy
-  - pip install sympy
-  # and some use matplotlib
-  - pip install matplotlib
-  # and coverage
-  - pip install pytest-cov
-
+  - make install-test-deps
 # command to run tests
 script: make test
+cache: pip

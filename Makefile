@@ -3,6 +3,7 @@ PYTHON ?= python3
 test:
 	@# Note: to run the tests, we also need additional dependencies
 	@# ("make install-test-deps")
+	python setup.py check -r -s
 	py.test -v tests/ --nbval --current-env --sanitize-with tests/sanitize_defaults.cfg --ignore tests/ipynb-test-samples
 
 build-dists:
@@ -15,4 +16,4 @@ release: build-dists
 
 
 install-test-deps:
-	pip install matplotlib sympy
+	pip install matplotlib sympy docutils pygments pytest-cov

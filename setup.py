@@ -1,10 +1,14 @@
 from setuptools import setup
 
+readme = open('README.rst').read()
+
 setup(
     name="nbval",
     version="0.5",
     author="Laslett, Cortes, Kluyver, Pepper, Fangohr",
+    author_email="cmg@soton.ac.uk",
     description='A py.test plugin to validate Jupyter notebooks',
+    long_description=readme,
     packages = ['nbval'],
     url='https://github.com/computationalmodelling/nbval',
     # the following makes a plugin available to pytest
