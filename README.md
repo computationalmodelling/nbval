@@ -1,6 +1,7 @@
 # Py.test plugin for validating Jupyter notebooks
 
 [![Build Status](https://travis-ci.org/computationalmodelling/nbval.svg)](https://travis-ci.org/computationalmodelling/nbval)
+[![PyPI Version](https://badge.fury.io/py/nbval.svg)](https://pypi.python.org/pypi/nbval)
 
 The plugin adds functionality to py.test to recognise and collect Jupyter
 notebooks. The intended purpose of the tests is to determine whether execution
