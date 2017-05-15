@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="nbval",
-    version="0.5",
+    version="0.6",
     author="Laslett, Cortes, Kluyver, Pepper, Fangohr",
     description='A py.test plugin to validate Jupyter notebooks',
     packages = ['nbval'],
