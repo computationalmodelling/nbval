@@ -119,6 +119,8 @@ metadata_tags = {
     for (k, v) in comment_markers.items()
 }
 
+metadata_tags['raises-exception'] = 'check_exception'
+
 
 def find_comment_markers(cellsource):
     """Look through the cell source for comments which affect nbval's behaviour
