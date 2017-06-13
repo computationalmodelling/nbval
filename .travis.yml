@@ -6,6 +6,9 @@ python:
   - "3.5"
   - "3.4"
   - "2.7"
+matrix:
+  allow_failures:
+    - python: "nightly"
 
 install:
   # We do this conditionally because it saves us some downloading if the
