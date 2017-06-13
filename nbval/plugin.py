@@ -284,7 +284,7 @@ class IPyNbFile(pytest.File):
                     for w in ws:
                         self.parent.config.warn(
                             "C1",
-                            w.message,
+                            str(w.message),
                             '%s:Cell %d' % (
                                 getattr(self, "fspath", None),
                                 cell_num))
