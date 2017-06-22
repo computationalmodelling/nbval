@@ -122,11 +122,10 @@ class RunningKernel(object):
             logger.debug('Executing empty cell')
         return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
 
-
-    def await_idle(self, msg_id, timeout=None):
+    def await_reply(self, msg_id, timeout=None):
         """
         Continuously poll the kernel 'shell' stream for messages until:
-         - It receives an 'idle' status for the given message id
+         - It receives an 'execute_reply' status for the given message id
          - The timeout is reached awaiting a message, in which case
            a `Queue.Empty` exception will be raised.
         """
