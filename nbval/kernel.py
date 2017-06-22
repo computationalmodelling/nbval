@@ -88,6 +88,30 @@ class RunningKernel(object):
             cwd=cwd,
         )
 
+        self._ensure_iopub_up()
+
+    def _ensure_iopub_up(self):
+        total_timeout = 30
+        individual_timeout = 1
+        shell_timeout = 10
+        for _ in range(total_timeout // individual_timeout):
+            msg_id = self.kc.kernel_info()
+
+            try:
+                self.await_reply(msg_id, timeout=shell_timeout)
+            except Empty:
+                raise RuntimeError('Kernel info reqest timed out after %d seconds!' % shell_timeout)
+
+            try:
+                self.await_idle(msg_id, individual_timeout)
+            except Empty:
+                continue
+            else:
+                # got IOPub
+                break
+        else:
+            raise RuntimeError("Wasn't able to establish IOPub after %d seconds." % total_timeout)
+
     def get_message(self, stream, timeout=None):
         """
         Function is used to get a message from the iopub channel.
