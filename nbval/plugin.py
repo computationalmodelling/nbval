@@ -479,23 +479,6 @@ class IPyNbCell(pytest.Item):
             self.add_marker(xfail_mark)
 
 
-    def await_idle(self, parent_id):
-        """Poll the iopub stream until an idle message is received for the given parent ID"""
-        while True:
-            try:
-                # Get a message from the kernel iopub channel
-                msg = self.parent.get_kernel_message(timeout=self.output_timeout)
-
-            except Empty:
-                self.parent.kernel.stop()
-                raise RuntimeError('Timed out waiting for idle kernel!')
-            if msg['parent_header'].get('msg_id') != parent_id:
-                continue
-            if msg['msg_type'] == 'status':
-                if msg['content']['execution_state'] == 'idle':
-                    break
-
-
     def raise_cell_error(self, message, *args, **kwargs):
         raise NbCellError(self.cell_num, message, self.cell.source, *args, **kwargs)
 
@@ -660,7 +643,11 @@ class IPyNbCell(pytest.Item):
                 outs.append(out)
                 if not self.options['check_exception']:
                     # Ensure we flush iopub before raising error
-                    self.await_idle(msg_id)
+                    try:
+                        self.parent.kernel.await_idle(msg_id, self.output_timeout)
+                    except Empty:
+                        self.stop()
+                        raise RuntimeError('Timed out waiting for idle kernel!')
                     traceback = '\n' + '\n'.join(reply['traceback'])
                     if out['ename'] == 'KeyboardInterrupt' and self.parent.timed_out:
                         msg = "Timeout of %g seconds exceeded executing cell" % timeout

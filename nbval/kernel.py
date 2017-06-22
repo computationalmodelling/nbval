@@ -139,6 +139,17 @@ class RunningKernel(object):
                     raise RuntimeError('Kernel aborted execution request')
                 return
 
+    def await_idle(self, parent_id, timeout):
+        """Poll the iopub stream until an idle message is received for the given parent ID"""
+        while True:
+            # Get a message from the kernel iopub channel
+            msg = self.get_message(timeout=timeout, stream='iopub') # raises Empty on timeout!
+
+            if msg['parent_header'].get('msg_id') != parent_id:
+                continue
+            if msg['msg_type'] == 'status':
+                if msg['content']['execution_state'] == 'idle':
+                    break
 
     def is_alive(self):
         if hasattr(self, 'km'):
