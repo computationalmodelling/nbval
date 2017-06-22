@@ -100,11 +100,11 @@ class RunningKernel(object):
             elif stream == 'shell':
                 msg = self.kc.get_shell_msg(timeout=timeout)
             else:
-                raise ValueError('Invalid stream specified: "%s"' % stream)
+                raise ValueError('Invalid stream specified: "%s"', stream)
         except Empty:
-            logger.debug('Kernel: Timeout waiting for message on %s' % stream)
+            logger.debug('Kernel: Timeout waiting for message on %s', stream)
             raise
-        logger.debug("Kernel message (%s):\n%s" % (stream, pformat(msg)))
+        logger.debug("Kernel message (%s):\n%s", stream, pformat(msg))
         return msg
 
     def execute_cell_input(self, cell_input, allow_stdin=None):
@@ -117,7 +117,7 @@ class RunningKernel(object):
         the kernel.
         """
         if cell_input:
-            logger.debug('Executing cell: "%s"...' % (cell_input.splitlines()[0][:40]))
+            logger.debug('Executing cell: "%s"...', cell_input.splitlines()[0][:40])
         else:
             logger.debug('Executing empty cell')
         return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
