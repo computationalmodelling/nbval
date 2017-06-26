@@ -124,7 +124,7 @@ class RunningKernel(object):
             elif stream == 'shell':
                 msg = self.kc.get_shell_msg(timeout=timeout)
             else:
-                raise ValueError('Invalid stream specified: "%s"', stream)
+                raise ValueError('Invalid stream specified: "%s"' % stream)
         except Empty:
             logger.debug('Kernel: Timeout waiting for message on %s', stream)
             raise
