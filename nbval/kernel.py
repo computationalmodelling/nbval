@@ -88,6 +88,30 @@ class RunningKernel(object):
             cwd=cwd,
         )
 
+        self._ensure_iopub_up()
+
+    def _ensure_iopub_up(self):
+        total_timeout = 30
+        individual_timeout = 1
+        shell_timeout = 10
+        for _ in range(total_timeout // individual_timeout):
+            msg_id = self.kc.kernel_info()
+
+            try:
+                self.await_reply(msg_id, timeout=shell_timeout)
+            except Empty:
+                raise RuntimeError('Kernel info reqest timed out after %d seconds!' % shell_timeout)
+
+            try:
+                self.await_idle(msg_id, individual_timeout)
+            except Empty:
+                continue
+            else:
+                # got IOPub
+                break
+        else:
+            raise RuntimeError("Wasn't able to establish IOPub after %d seconds." % total_timeout)
+
     def get_message(self, stream, timeout=None):
         """
         Function is used to get a message from the iopub channel.
@@ -102,9 +126,9 @@ class RunningKernel(object):
             else:
                 raise ValueError('Invalid stream specified: "%s"' % stream)
         except Empty:
-            logger.debug('Kernel: Timeout waiting for message on %s' % stream)
+            logger.debug('Kernel: Timeout waiting for message on %s', stream)
             raise
-        logger.debug("Kernel message (%s):\n%s" % (stream, pformat(msg)))
+        logger.debug("Kernel message (%s):\n%s", stream, pformat(msg))
         return msg
 
     def execute_cell_input(self, cell_input, allow_stdin=None):
@@ -117,16 +141,15 @@ class RunningKernel(object):
         the kernel.
         """
         if cell_input:
-            logger.debug('Executing cell: "%s"...' % (cell_input.splitlines()[0][:40]))
+            logger.debug('Executing cell: "%s"...', cell_input.splitlines()[0][:40])
         else:
             logger.debug('Executing empty cell')
         return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
 
-
-    def await_idle(self, msg_id, timeout=None):
+    def await_reply(self, msg_id, timeout=None):
         """
         Continuously poll the kernel 'shell' stream for messages until:
-         - It receives an 'idle' status for the given message id
+         - It receives an 'execute_reply' status for the given message id
          - The timeout is reached awaiting a message, in which case
            a `Queue.Empty` exception will be raised.
         """
@@ -140,6 +163,17 @@ class RunningKernel(object):
                     raise RuntimeError('Kernel aborted execution request')
                 return
 
+    def await_idle(self, parent_id, timeout):
+        """Poll the iopub stream until an idle message is received for the given parent ID"""
+        while True:
+            # Get a message from the kernel iopub channel
+            msg = self.get_message(timeout=timeout, stream='iopub') # raises Empty on timeout!
+
+            if msg['parent_header'].get('msg_id') != parent_id:
+                continue
+            if msg['msg_type'] == 'status':
+                if msg['content']['execution_state'] == 'idle':
+                    break
 
     def is_alive(self):
         if hasattr(self, 'km'):
