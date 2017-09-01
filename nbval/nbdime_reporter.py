@@ -143,7 +143,7 @@ class NbdimeReporter:
 
     def _getfailureheadline(self, rep):
         if hasattr(rep, 'location'):
-            fspath, lineno, domain = rep.location
-            return fspath + '::' + domain
+            domain = rep.location[2]
+            return domain
         else:
             return "test session"  # XXX?
