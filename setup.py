@@ -1,9 +1,11 @@
 from setuptools import setup
 
+from nbval._version import __version__
+
 setup(
     name="nbval",
-    version="0.7",
-    author="Laslett, Cortes, Kluyver, Pepper, Fangohr",
+    version=__version__,
+    author="Laslett, Cortes, Fauske, Kluyver, Pepper, Fangohr",
     description='A py.test plugin to validate Jupyter notebooks',
     packages = ['nbval'],
     url='https://github.com/computationalmodelling/nbval',
