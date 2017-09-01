@@ -14,7 +14,7 @@ reference and documentation), are executing consistently.
 Each cell is taken as a test, a cell that doesn't reproduce the expected
 output will fail.
 
-See `documentation.ipynb` for the full documentation.
+See [`documentation.ipynb`](https://nbviewer.jupyter.org/github/computationalmodelling/nbval/blob/master/documentation.ipynb) for the full documentation.
 
 ## Installation
 Available on PyPi:
