@@ -32,6 +32,11 @@ from .kernel import RunningKernel, CURRENT_ENV_KERNEL_NAME
 from .cover import setup_coverage, teardown_coverage
 
 
+# TODO: integrate properly with pytest plugins/commandline
+import loading
+import comparing
+
+
 # define colours for pretty outputs
 class bcolors:
     HEADER = '\033[95m'
@@ -101,7 +106,10 @@ def pytest_collect_file(path, parent):
     Collect IPython notebooks using the specified pytest hook
     """
     opt = parent.config.option
-    if (opt.nbval or opt.nbval_lax) and path.fnmatch("*.ipynb"):
+
+    # TODO: add a --no-generate option, maybe?
+
+    if (opt.nbval or opt.nbval_lax) and path.fnmatch("*[!nbval].ipynb"):
         return IPyNbFile(path, parent)
 
 
@@ -204,7 +212,8 @@ class IPyNbFile(pytest.File):
             'execution_count',
         )
         if not config.option.nbdime:
-            self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
+            # TODO: only working on the 'data' bit for now
+            self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg', 'text/html')
 
     kernel = None
 
@@ -298,7 +307,15 @@ class IPyNbFile(pytest.File):
                 # Update 'code' cell count
                 cell_num += 1
 
+
     def teardown(self):
+        # always store the new results; might want to replace the
+        # reference results TODO: welcome to
+        # your_notebook.nbval.nbval.nbval.nbval.ipynb
+        nuname = re.sub('.ipynb$','.nbval.ipynb',str(self.fspath))
+        with open(nuname, 'wt') as f:
+            nbformat.write(self.nb, f)
+
         if self.kernel is not None and self.kernel.is_alive():
             if getattr(self.parent.config.option, 'cov_source', None):
                 teardown_coverage(self.parent.config, self.kernel)
@@ -428,6 +445,9 @@ class IPyNbCell(pytest.Item):
                     + "<<<<<<<<<<<< Reference outputs from ipynb file:"
                     + bcolors.ENDC
                 )
+                # TODO: need a way to hook in something to show
+                # differences. E.g. you'd want the output of
+                # assert_array_equal.
                 for val in ref_values:
                     self.comparison_traceback.append(_trim_base64(val))
                 self.comparison_traceback.append(
@@ -444,7 +464,11 @@ class IPyNbCell(pytest.Item):
 
             for test_out, ref_out in zip(test_values, ref_values):
                 # Compare the individual values
-                if test_out != ref_out:
+                loader = loading.get_handler(key)
+                test_out = loader(test_out)
+                ref_out = loader(ref_out)
+                comparer = comparing.get_handler(type(ref_out))
+                if not comparer(test_out,ref_out):
                     self.comparison_traceback.append(
                         bcolors.OKBLUE
                         + " mismatch '%s'\n" % key
@@ -497,6 +521,11 @@ class IPyNbCell(pytest.Item):
         if self.options['skip']:
             pytest.skip()
 
+        # store reference outputs so they're not overwritten when
+        # cell is run...
+        import copy
+        ref_outputs = copy.copy(self.cell.outputs)
+            
         kernel = self.parent.kernel
         if not kernel.is_alive():
             raise RuntimeError("Kernel dead on test start")
@@ -561,6 +590,7 @@ class IPyNbCell(pytest.Item):
             msg_type = msg['msg_type']
             reply = msg['content']
             out = NotebookNode(output_type=msg_type)
+            #self.cell.outputs = out # I think!!
 
             # Is the iopub message related to this cell execution?
             if msg['parent_header'].get('msg_id') != msg_id:
@@ -660,6 +690,10 @@ class IPyNbCell(pytest.Item):
             else:
                 print("unhandled iopub msg:", msg_type)
 
+        # TODO: don't need to do this, do I? Or do I? Didn't it
+        # already happen?
+        self.cell.outputs = copy.copy(outs)
+                
         outs[:] = coalesce_streams(outs)
 
         # Compare if the outputs have the same number of lines
@@ -669,13 +703,14 @@ class IPyNbCell(pytest.Item):
         #     failed = True
         failed = False
         if self.options['check']:
-            if not self.compare_outputs(outs, coalesce_streams(self.cell.outputs)):
+            if not self.compare_outputs(outs, coalesce_streams(ref_outputs)):
                 failed = True
 
         # If the comparison failed then we raise an exception.
         if failed:
             # The traceback containing the difference in the outputs is
             # stored in the variable comparison_traceback
+                    
             self.raise_cell_error(
                 "Cell outputs differ",
                 # Here we must put the traceback output:
@@ -817,6 +852,10 @@ _base64 = re.compile(r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]
 
 def _trim_base64(s):
     """Trim and hash base64 strings"""
+    # TODO: tmp hack - can no longer assume ref_out is always string.
+    # Would rather get some useful diff where possible.
+    if not isinstance(s,str):
+        s = repr(s)
     if len(s) > 64 and _base64.match(s.replace('\n', '')):
         h = hash_string(s)
         s = '%s...<snip base64, md5=%s...>' % (s[:8], h[:16])
