@@ -75,6 +75,8 @@ class RunningKernel(object):
     this class.
 
     """
+    # CEBALERT: what does the below 'matplotlib is inline' comment
+    # mean?
     def __init__(self, kernel_name, cwd=None):
         """
         Initialise a new kernel
@@ -89,6 +91,23 @@ class RunningKernel(object):
         )
 
         self._ensure_iopub_up()
+
+        setup_code = """
+import json
+import dumping
+ip = get_ipython()
+json_formatter = ip.display_formatter.formatters['application/json']
+
+for type_, handler in dumping.handlers.items():
+    json_formatter.for_type(type_, handler)
+"""
+        self.kc.execute(setup_code,
+                        silent=False, #TODO True,
+                        store_history=False,
+                        allow_stdin=False,
+                        stop_on_error=True)
+
+        
 
     def _ensure_iopub_up(self):
         total_timeout = 30
