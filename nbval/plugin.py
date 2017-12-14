@@ -341,7 +341,7 @@ class IPyNbCell(pytest.Item):
             ))
             if exc.inner_traceback:
                 msg_items.append((
-                    bcolors.OKBLUE + "Traceback:%s" + bcolors.ENDC) %
+                    bcolors.OKBLUE + "Traceback:" + bcolors.ENDC + "\n%s\n") %
                     exc.inner_traceback)
             return "\n".join(msg_items)
         else:
@@ -442,28 +442,49 @@ class IPyNbCell(pytest.Item):
                     + bcolors.ENDC)
                 return False
 
-            for test_out, ref_out in zip(test_values, ref_values):
+            for ref_out, test_out in zip(ref_values, test_values):
                 # Compare the individual values
-                if test_out != ref_out:
-                    self.comparison_traceback.append(
-                        bcolors.OKBLUE
-                        + " mismatch '%s'\n" % key
-                        + bcolors.FAIL
-                        + "<<<<<<<<<<<< Reference output from ipynb file:"
-                        + bcolors.ENDC)
-                    self.comparison_traceback.append(_trim_base64(ref_out))
-                    self.comparison_traceback.append(
-                        bcolors.FAIL
-                        + '============ disagrees with newly computed (test) output:'
-                        + bcolors.ENDC)
-                    self.comparison_traceback.append(_trim_base64(test_out))
-                    self.comparison_traceback.append(
-                        bcolors.FAIL
-                        + '>>>>>>>>>>>>'
-                        + bcolors.ENDC)
-
+                if ref_out != test_out:
+                    self.format_output_compare(key, ref_out, test_out)
                     return False
         return True
+
+    def format_output_compare(self, key, left, right):
+        """Format an output for printing"""
+        if isinstance(left, six.string_types):
+            left = _trim_base64(output)
+        if isinstance(right, six.string_types):
+            right = _trim_base64(output)
+
+        self.comparison_traceback.append(
+            bcolors.OKBLUE
+            + " mismatch '%s'" % key
+            + bcolors.FAIL)
+
+        # Use comparison repr from pytest:
+        hook_result = self.ihook.pytest_assertrepr_compare(
+            config=self.config, op='==', left=left, right=right)
+        for new_expl in hook_result:
+            if new_expl:
+                new_expl = ['  %s' % line.replace("\n", "\\n") for line in new_expl]
+                self.comparison_traceback.append("\n assert reference_output == test_output failed:\n")
+                self.comparison_traceback.extend(new_expl)
+                break
+        else:
+            # Fallback repr:
+            self.comparison_traceback.append(
+                + "  <<<<<<<<<<<< Reference output from ipynb file:"
+                + bcolors.ENDC)
+            self.comparison_traceback.append(_indent(left))
+            self.comparison_traceback.append(
+                bcolors.FAIL
+                + '  ============ disagrees with newly computed (test) output:'
+                + bcolors.ENDC)
+            self.comparison_traceback.append(_indent(right))
+            self.comparison_traceback.append(
+                bcolors.FAIL
+                + '  >>>>>>>>>>>>')
+        self.comparison_traceback.append(bcolors.ENDC)
 
 
     """ *****************************************************
@@ -820,4 +841,11 @@ def _trim_base64(s):
     if len(s) > 64 and _base64.match(s.replace('\n', '')):
         h = hash_string(s)
         s = '%s...<snip base64, md5=%s...>' % (s[:8], h[:16])
+    return s
+
+
+def _indent(s, indent='  '):
+    """Intent each line with indent"""
+    if isinstance(s, six.string_types):
+        return '\n'.join(('%s%s' % (indent, line) for line in s.splitlines()))
     return s
