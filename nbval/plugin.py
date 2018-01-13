@@ -452,9 +452,9 @@ class IPyNbCell(pytest.Item):
     def format_output_compare(self, key, left, right):
         """Format an output for printing"""
         if isinstance(left, six.string_types):
-            left = _trim_base64(output)
+            left = _trim_base64(left)
         if isinstance(right, six.string_types):
-            right = _trim_base64(output)
+            right = _trim_base64(right)
 
         self.comparison_traceback.append(
             bcolors.OKBLUE
