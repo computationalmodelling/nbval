@@ -10,6 +10,7 @@ from __future__ import print_function
 # import the pytest API
 import pytest
 import sys
+import os
 import re
 import hashlib
 import warnings
@@ -348,7 +349,7 @@ class IPyNbCell(pytest.Item):
             return "pytest plugin exception: %s" % str(exc)
 
     def reportinfo(self):
-        description = "cell %d" % self.cell_num
+        description = "%s::Cell %d" % (self.fspath.relto(self.config.rootdir), self.cell_num)
         return self.fspath, 0, description
 
     def compare_outputs(self, test, ref, skip_compare=None):
