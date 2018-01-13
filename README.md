@@ -97,6 +97,20 @@ The `regex` option contains the expression that is going to be matched in the ou
 names do not have any meaning or influence in the testing system, it will take
 all the sections and replace the corresponding options.
 
+
+### Coverage
+
+To use notebooks to generate coverage for imported code, use the pytest-cov plugin.
+nbval should automatically detect the relevant options and configure itself with it.
+
+
+### Parallel execution
+
+nbval is compatible with the pytest-xdist plugin for parallel running of tests. It does
+however require the use of the `--dist loadscope` flag to ensure that all cells of one
+notebook are run on the same kernel.
+
+
 ## Help
 The `py.test` system help can be obtained with `py.test -h`, which will
 show all the flags that can be passed to the command, such as the
