@@ -403,17 +403,29 @@ class IPyNbCell(pytest.Item):
         # The traceback from the comparison will be stored here.
         self.comparison_traceback = []
 
+        ref_keys = set(reference_outs.keys())
+        test_keys = set(testing_outs.keys())
+
+        if ref_keys - test_keys:
+            self.comparison_traceback.append(
+                bcolors.FAIL
+                + "Missing output fields from running code: %s"
+                % (ref_keys - test_keys)
+                + bcolors.ENDC
+            )
+            return False
+        elif test_keys - ref_keys:
+            self.comparison_traceback.append(
+                bcolors.FAIL
+                + "Unexpected output fields from running code: %s"
+                % (test_keys - ref_keys)
+                + bcolors.ENDC
+            )
+            return False
+
+        # If we've got to here, the two dicts must have the same set of keys
+
         for key in reference_outs.keys():
-
-            # Check if they have the same keys
-            if key not in testing_outs.keys():
-                self.comparison_traceback.append(
-                    bcolors.FAIL
-                    + "missing key: TESTING %s != REFERENCE %s"
-                    % (testing_outs.keys(), reference_outs.keys())
-                    + bcolors.ENDC)
-                return False
-
             # Get output values for dictionary entries.
             # We use str() to be sure that the unicode key strings from the
             # reference are also read from the testing dictionary:
