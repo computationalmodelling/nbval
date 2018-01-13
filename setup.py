@@ -20,6 +20,9 @@ setup(
         'nbformat',
         'ipykernel'
     ],
+    extras_require = {
+        'test': ['matplotlib', 'sympy'],
+    },
     classifiers = [
         'Framework :: IPython',
         'Framework :: Pytest',
