@@ -485,7 +485,7 @@ class IPyNbCell(pytest.Item):
         else:
             # Fallback repr:
             self.comparison_traceback.append(
-                + "  <<<<<<<<<<<< Reference output from ipynb file:"
+                "  <<<<<<<<<<<< Reference output from ipynb file:"
                 + bcolors.ENDC)
             self.comparison_traceback.append(_indent(left))
             self.comparison_traceback.append(
@@ -797,7 +797,6 @@ def coalesce_streams(outputs):
 
     # process \r and \b characters
     for output in streams.values():
-        backspace_pat
         old = output.text
         while len(output.text) < len(old):
             old = output.text
