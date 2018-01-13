@@ -63,10 +63,15 @@ def test_print(filename, correctoutcome):
     else:
         exitcode = subprocess.call(command)
 
-    if correctoutcome is 'pass':
+    if correctoutcome == 'pass':
+        if exitcode != 0:
+            raise AssertionError("Tests failed on ipynb (expected pass)")
         assert exitcode is 0
         print("The call of py.test has not reported errors - this is good.")
-    elif correctoutcome is 'fail':
-        assert exitcode is not 0
+    elif correctoutcome == 'fail':
+        if exitcode == 0:
+            raise AssertionError("Tests passed on ipynb (expected fail)")
         print("The call of py.test has reported errors - " +
               "this is good for this test.")
+    else:
+        raise AssertionError("correctoutcome=%r (not 'pass' or 'fail')" % correctoutcome)
