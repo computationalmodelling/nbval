@@ -19,12 +19,8 @@ install:
   # Travis needs to update pip/setuptools
   - pip install --upgrade setuptools pip
   - pip install .
-  # have some tests using sympy
-  - pip install sympy
-  # and some use matplotlib
-  - pip install matplotlib
-  # and coverage
-  - pip install pytest-cov
+  - pip install doit
+  - doit install_test_deps
 
 # command to run tests
-script: make test
+script: doit test
