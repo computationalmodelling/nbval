@@ -404,17 +404,29 @@ class IPyNbCell(pytest.Item):
         # The traceback from the comparison will be stored here.
         self.comparison_traceback = []
 
+        ref_keys = set(reference_outs.keys())
+        test_keys = set(testing_outs.keys())
+
+        if ref_keys - test_keys:
+            self.comparison_traceback.append(
+                bcolors.FAIL
+                + "Missing output fields from running code: %s"
+                % (ref_keys - test_keys)
+                + bcolors.ENDC
+            )
+            return False
+        elif test_keys - ref_keys:
+            self.comparison_traceback.append(
+                bcolors.FAIL
+                + "Unexpected output fields from running code: %s"
+                % (test_keys - ref_keys)
+                + bcolors.ENDC
+            )
+            return False
+
+        # If we've got to here, the two dicts must have the same set of keys
+
         for key in reference_outs.keys():
-
-            # Check if they have the same keys
-            if key not in testing_outs.keys():
-                self.comparison_traceback.append(
-                    bcolors.FAIL
-                    + "missing key: TESTING %s != REFERENCE %s"
-                    % (testing_outs.keys(), reference_outs.keys())
-                    + bcolors.ENDC)
-                return False
-
             # Get output values for dictionary entries.
             # We use str() to be sure that the unicode key strings from the
             # reference are also read from the testing dictionary:
@@ -453,9 +465,9 @@ class IPyNbCell(pytest.Item):
     def format_output_compare(self, key, left, right):
         """Format an output for printing"""
         if isinstance(left, six.string_types):
-            left = _trim_base64(output)
+            left = _trim_base64(left)
         if isinstance(right, six.string_types):
-            right = _trim_base64(output)
+            right = _trim_base64(right)
 
         self.comparison_traceback.append(
             bcolors.OKBLUE
@@ -474,7 +486,7 @@ class IPyNbCell(pytest.Item):
         else:
             # Fallback repr:
             self.comparison_traceback.append(
-                + "  <<<<<<<<<<<< Reference output from ipynb file:"
+                "  <<<<<<<<<<<< Reference output from ipynb file:"
                 + bcolors.ENDC)
             self.comparison_traceback.append(_indent(left))
             self.comparison_traceback.append(
@@ -786,7 +798,6 @@ def coalesce_streams(outputs):
 
     # process \r and \b characters
     for output in streams.values():
-        backspace_pat
         old = output.text
         while len(output.text) < len(old):
             old = output.text
