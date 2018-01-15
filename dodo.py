@@ -14,7 +14,7 @@ def task_install_test_deps():
     test_deps = ['matplotlib', 'sympy', 'pytest-cov']
     return {
         'actions': [['pip', 'install'] + test_deps],
-        'verbostity': 2,
+        'verbosity': 2,
     }
 
 def task_build_dists():
