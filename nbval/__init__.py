@@ -2,4 +2,4 @@
 A pytest plugin for testing and validating ipython notebooks
 """
 
-__version__ = '0.7'
+from ._version import __version__
