@@ -20,7 +20,8 @@ setup(
         'six',
         'jupyter_client',
         'nbformat',
-        'ipykernel'
+        'ipykernel',
+        'coverage'
     ],
     classifiers = [
         'Framework :: IPython',
