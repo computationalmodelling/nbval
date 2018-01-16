@@ -5,6 +5,5 @@ dependencies:
 - python=3.5
 - numpy
 - matplotlib
-- sphinx
+- sphinx<=1.6.5
 - nbsphinx
-- jupyter_sphinx
