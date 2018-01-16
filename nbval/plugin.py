@@ -696,13 +696,18 @@ class IPyNbCell(pytest.Item):
 
         outs[:] = coalesce_streams(outs)
 
+        # Cells where the reference is not run, will not check outputs:
+        unrun = self.cell.execution_count is None
+        if unrun and self.cell.outputs:
+            self.raise_cell_error('Unrun reference cell has outputs')
+
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
         # if len(outs) != len(self.cell.outputs):
         #     self.diff_number_outputs(outs, self.cell.outputs)
         #     failed = True
         failed = False
-        if self.options['check']:
+        if self.options['check'] and not unrun:
             if not self.compare_outputs(outs, coalesce_streams(self.cell.outputs)):
                 failed = True
 
