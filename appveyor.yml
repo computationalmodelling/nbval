@@ -1,0 +1,27 @@
+# Do not build feature branch with open Pull Requests
+skip_branch_with_pr: true
+
+# environment variables
+environment:
+  matrix:
+    - PYTHON: "C:\\Python35-x64"
+      PYTHON_VERSION: "3.5.x"
+      PYTHON_MAJOR: 3
+      PYTHON_ARCH: "64"
+
+# scripts that run after cloning repository
+install:
+  # Ensure python scripts are from right version:
+  - 'SET "PATH=%PYTHON%\Scripts;%PYTHON%;%PATH%"'
+  # Update pip/setuptools:
+  - pip install --upgrade setuptools pip
+  # Install our package:
+  - pip install .
+  - pip install doit
+  - doit install_test_deps
+
+build: off
+
+# to run your custom scripts instead of automatic tests
+test_script:
+  - doit test
