@@ -23,9 +23,9 @@ def test_conf_ignore_stderr(testdir):
     # Setup notebook with stream outputs
     nb = build_nb([
         "import sys",
-        "print('test')",
-        "print('error output', file=sys.stderr)",
-        "print('test')\nprint('error output', file=sys.stderr)",
+        "sys.stdout.write('test\\n')",
+        "sys.stderr.write('error output\\n')",
+        "sys.stdout.write('test\\n')\nsys.stderr.write('error output\\n')",
     ], mark_run=True)
     nb.cells[1].outputs.append(nbformat.v4.new_output(
         'stream',
