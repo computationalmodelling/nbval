@@ -2,12 +2,17 @@
 import nbformat
 
 
-def build_nb(sources):
+def build_nb(sources, mark_run=False):
     """Builds a notebook of only code cells, from a list of sources
     """
     nb = nbformat.v4.new_notebook()
+    execution_count = 1
     for src in sources:
-        nb.cells.append(nbformat.v4.new_code_cell(src))
+        cell = nbformat.v4.new_code_cell(src)
+        if mark_run:
+            cell.execution_count = execution_count
+            execution_count += 1
+        nb.cells.append(cell)
     return nb
 
 

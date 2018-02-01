@@ -43,7 +43,7 @@ def test_coverage(testdir):
     ])
     # Write notebook to test dir
     nbformat.write(nb, os.path.join(
-        str(testdir.tmpdir), 'test_timeouts.ipynb'))
+        str(testdir.tmpdir), 'test_coverage.ipynb'))
 
     # Run tests
     result = testdir.runpytest_inprocess('--nbval', '--current-env', '--cov', '.')
