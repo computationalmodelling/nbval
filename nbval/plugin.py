@@ -42,6 +42,15 @@ class bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
+class nocolors:
+    HEADER = ''
+    OKBLUE = ''
+    OKGREEN = ''
+    WARNING = ''
+    FAIL = ''
+    ENDC = ''
+
+
 
 class NbCellError(Exception):
     """ custom exception for error reporting. """
@@ -319,6 +328,8 @@ class IPyNbCell(pytest.Item):
         self.options = options
         self.config = parent.parent.config
         self.output_timeout = 5
+        # Disable colors if we have been explicitly asked to
+        self.colors = bcolors if self.config.option.color != 'no' else nocolors
         # _pytest.skipping assumes all pytest.Item have this attribute:
         self.obj = Dummy()
 
@@ -329,12 +340,13 @@ class IPyNbCell(pytest.Item):
     def repr_failure(self, excinfo):
         """ called when self.runtest() raises an exception. """
         exc = excinfo.value
+        cc = self.colors
         if isinstance(exc, NbCellError):
             msg_items = [
-                bcolors.FAIL + "Notebook cell execution failed" + bcolors.ENDC]
+                cc.FAIL + "Notebook cell execution failed" + cc.ENDC]
             formatstring = (
-                bcolors.OKBLUE + "Cell %d: %s\n\n" +
-                "Input:\n" + bcolors.ENDC + "%s\n")
+                cc.OKBLUE + "Cell %d: %s\n\n" +
+                "Input:\n" + cc.ENDC + "%s\n")
             msg_items.append(formatstring % (
                 exc.cell_num,
                 str(exc),
@@ -342,7 +354,7 @@ class IPyNbCell(pytest.Item):
             ))
             if exc.inner_traceback:
                 msg_items.append((
-                    bcolors.OKBLUE + "Traceback:" + bcolors.ENDC + "\n%s\n") %
+                    cc.OKBLUE + "Traceback:" + cc.ENDC + "\n%s\n") %
                     exc.inner_traceback)
             return "\n".join(msg_items)
         else:
@@ -358,6 +370,9 @@ class IPyNbCell(pytest.Item):
 
         test = transform_streams_for_comparison(test)
         ref = transform_streams_for_comparison(ref)
+
+        # Color codes to use for reporting
+        cc = self.colors
 
         # We reformat outputs into a dictionaries where
         # key:
@@ -409,18 +424,18 @@ class IPyNbCell(pytest.Item):
 
         if ref_keys - test_keys:
             self.comparison_traceback.append(
-                bcolors.FAIL
+                cc.FAIL
                 + "Missing output fields from running code: %s"
                 % (ref_keys - test_keys)
-                + bcolors.ENDC
+                + cc.ENDC
             )
             return False
         elif test_keys - ref_keys:
             self.comparison_traceback.append(
-                bcolors.FAIL
+                cc.FAIL
                 + "Unexpected output fields from running code: %s"
                 % (test_keys - ref_keys)
-                + bcolors.ENDC
+                + cc.ENDC
             )
             return False
 
@@ -435,24 +450,24 @@ class IPyNbCell(pytest.Item):
             if len(test_values) != len(ref_values):
                 # The number of outputs for a specific MIME type differs
                 self.comparison_traceback.append(
-                    bcolors.OKBLUE
+                    cc.OKBLUE
                     + 'dissimilar number of outputs for key "%s"' % key
-                    + bcolors.FAIL
+                    + cc.FAIL
                     + "<<<<<<<<<<<< Reference outputs from ipynb file:"
-                    + bcolors.ENDC
+                    + cc.ENDC
                 )
                 for val in ref_values:
                     self.comparison_traceback.append(_trim_base64(val))
                 self.comparison_traceback.append(
-                    bcolors.FAIL
+                    cc.FAIL
                     + '============ disagrees with newly computed (test) output:'
-                    + bcolors.ENDC)
+                    + cc.ENDC)
                 for val in test_values:
                     self.comparison_traceback.append(_trim_base64(val))
                 self.comparison_traceback.append(
-                    bcolors.FAIL
+                    cc.FAIL
                     + '>>>>>>>>>>>>'
-                    + bcolors.ENDC)
+                    + cc.ENDC)
                 return False
 
             for ref_out, test_out in zip(ref_values, test_values):
@@ -469,10 +484,12 @@ class IPyNbCell(pytest.Item):
         if isinstance(right, six.string_types):
             right = _trim_base64(right)
 
+        cc = self.colors
+
         self.comparison_traceback.append(
-            bcolors.OKBLUE
+            cc.OKBLUE
             + " mismatch '%s'" % key
-            + bcolors.FAIL)
+            + cc.FAIL)
 
         # Use comparison repr from pytest:
         hook_result = self.ihook.pytest_assertrepr_compare(
@@ -487,17 +504,17 @@ class IPyNbCell(pytest.Item):
             # Fallback repr:
             self.comparison_traceback.append(
                 "  <<<<<<<<<<<< Reference output from ipynb file:"
-                + bcolors.ENDC)
+                + cc.ENDC)
             self.comparison_traceback.append(_indent(left))
             self.comparison_traceback.append(
-                bcolors.FAIL
+                cc.FAIL
                 + '  ============ disagrees with newly computed (test) output:'
-                + bcolors.ENDC)
+                + cc.ENDC)
             self.comparison_traceback.append(_indent(right))
             self.comparison_traceback.append(
-                bcolors.FAIL
+                cc.FAIL
                 + '  >>>>>>>>>>>>')
-        self.comparison_traceback.append(bcolors.ENDC)
+        self.comparison_traceback.append(cc.ENDC)
 
 
     """ *****************************************************
