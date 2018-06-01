@@ -14,7 +14,7 @@ install:
   # Ensure python scripts are from right version:
   - 'SET "PATH=%PYTHON%\Scripts;%PYTHON%;%PATH%"'
   # Update pip/setuptools:
-  - pip install --upgrade setuptools pip
+  - python -m pip install --upgrade setuptools pip
   # Install our package:
   - pip install .
   - pip install doit
