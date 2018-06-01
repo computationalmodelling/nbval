@@ -6,3 +6,4 @@ __pycache__
 *.egg-info
 .cache
 .doit.db*
+.coverage*
