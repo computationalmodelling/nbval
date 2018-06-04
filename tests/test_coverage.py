@@ -37,7 +37,7 @@ def test_coverage(testdir):
         "lib.myprod(1, 3)",
         "lib.myprod(2.5, 2.5)",
         "lib.myprod(2, 'cat')"
-    ])
+    ], mark_run=True)
     add_expected_plaintext_outputs(nb, [
         None, "3", "6.25", "'catcat'"
     ])

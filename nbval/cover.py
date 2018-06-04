@@ -51,6 +51,8 @@ def setup_coverage(config, kernel, floc, output_loc=None):
         # Get options from pytest-cov's command line arguments:
         source = config.option.cov_source
         config_file = config.option.cov_config
+        if isinstance(config_file, str) and os.path.isfile(config_file):
+            config_file = os.path.abspath(config_file)
 
         # Copy the suffix of plugin if available
         suffix = _make_suffix(cov)
