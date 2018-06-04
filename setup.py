@@ -2,11 +2,16 @@ from setuptools import setup
 
 from nbval._version import __version__
 
+with open('README.md') as f:
+    readme = f.read()
+
 setup(
     name="nbval",
     version=__version__,
     author="Laslett, Cortes, Fauske, Kluyver, Pepper, Fangohr",
     description='A py.test plugin to validate Jupyter notebooks',
+    long_description=readme,
+    long_description_content_type="text/markdown",
     packages = ['nbval'],
     url='https://github.com/computationalmodelling/nbval',
     # the following makes a plugin available to pytest
