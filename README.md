@@ -67,8 +67,8 @@ marker comment.
 
     py.test --nbval-lax
 
-The commands above will execute all the `.ipynb` files in the current folder.
-Alternatively, you can execute a specific notebook:
+The commands above will execute all the `.ipynb` files and 'pytest' tests in the current folder.
+Specify `-p no:python` if you would like to execute notebooks only. Alternatively, you can execute a specific notebook:
 
     py.test --nbval my_notebook.ipynb
 
