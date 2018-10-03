@@ -68,7 +68,7 @@ def setup_coverage(config, kernel, floc, output_loc=None):
         kernel.await_idle(msg_id, 60)  # A minute should be plenty to enable coverage
     else:
         warnings.warn_explicit(
-            'Coverage currently not supported for language "%s".' % language,
+            'Coverage currently not supported for language %r.' % language,
             category=UserWarning,
             filename=floc[0] if floc else '',
             lineno=0

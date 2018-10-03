@@ -8,7 +8,7 @@ from utils import build_nb, add_expected_plaintext_outputs
 pytest_plugins = "pytester"
 
 
-_re_coverage_report_line = re.compile('^(\w)\s*(\d+)\s*(\d+)\s*(\d+)%$')
+_re_coverage_report_line = re.compile(r'^(\w)\s*(\d+)\s*(\d+)\s*(\d+)%$')
 
 
 def test_coverage(testdir):
@@ -49,7 +49,7 @@ def test_coverage(testdir):
     result = testdir.runpytest_inprocess('--nbval', '--current-env', '--cov', '.')
 
     # Check tests went off as they should:
-    result.ret == 0
+    assert result.ret == 0
 
     # Ensure coverage report was generated:
     assert os.path.exists(os.path.join(str(testdir.tmpdir), '.coverage'))
