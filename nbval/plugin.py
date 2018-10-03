@@ -288,18 +288,23 @@ class IPyNbFile(pytest.File):
                 with warnings.catch_warnings(record=True) as ws:
                     options = defaultdict(bool, find_metadata_tags(cell.metadata))
                     comment_opts = dict(find_comment_markers(cell.source))
-                    if set(comment_opts.keys()) & set(options.keys()):
-                        warnings.warn(
-                            "Overlapping options from comments and metadata, "
-                            "using options from comments: %s" %
-                            str(set(comment_opts.keys()) & set(options.keys())))
-                    for w in ws:
-                        self.parent.config.warn(
-                            "C1",
-                            str(w.message),
-                            '%s:Cell %d' % (
-                                getattr(self, "fspath", None),
-                                cell_num))
+                loc = '%s:Cell %d' % (getattr(self, "fspath", None), cell_num)
+                if set(comment_opts.keys()) & set(options.keys()):
+                    warnings.warn_explicit(
+                        "Overlapping options from comments and metadata, "
+                        "using options from comments: %s" %
+                        str(set(comment_opts.keys()) & set(options.keys())),
+                        category=UserWarning,
+                        filename=loc,
+                        lineno=0
+                    )
+                for w in ws:
+                    warnings.warn_explicit(
+                        str(w.message),
+                        category=UserWarning,
+                        filename=loc,
+                        lineno=0
+                    )
                 options.update(comment_opts)
                 options.setdefault('check', self.compare_outputs)
                 yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
