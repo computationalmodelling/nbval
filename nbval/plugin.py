@@ -580,7 +580,7 @@ class IPyNbCell(pytest.Item):
 
         # Poll the shell channel to get a message
         try:
-            self.parent.kernel.await_reply(msg_id, timeout=timeout)
+            kernel.await_reply(msg_id, timeout=timeout)
         except Empty:  # Timeout reached
             # Try to interrupt kernel, as this will give us traceback:
             kernel.interrupt()
