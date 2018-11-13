@@ -212,6 +212,7 @@ class IPyNbFile(pytest.File):
             'output_type',
             'name',
             'execution_count',
+            'application/vnd.jupyter.widget-view+json'  # Model IDs are random
         )
         if not config.option.nbdime:
             self.skip_compare = self.skip_compare + ('image/png', 'image/jpeg')
