@@ -5,6 +5,7 @@ notebook.
 
 import os
 import coverage
+import warnings
 
 
 # Coverage setup/teardown code to run in kernel
@@ -66,10 +67,12 @@ def setup_coverage(config, kernel, floc, output_loc=None):
         msg_id = kernel.kc.execute(cmd, stop_on_error=False)
         kernel.await_idle(msg_id, 60)  # A minute should be plenty to enable coverage
     else:
-        config.warn(
-            'C1',
-            'Coverage currently not supported for language "%s".' % language,
-            floc)
+        warnings.warn_explicit(
+            'Coverage currently not supported for language %r.' % language,
+            category=UserWarning,
+            filename=floc[0] if floc else '',
+            lineno=0
+        )
         return
 
 
