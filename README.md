@@ -53,7 +53,7 @@ In general, the functionality of the IPython notebook system is
 quite complex, but a detailed explanation of the messages
 and how the system works, can be found here
 
-http://ipython.org/ipython-doc/stable/development/messaging.html
+https://jupyter-client.readthedocs.io/en/latest/messaging.html#messaging
 
 ## Execution
 To execute this plugin, you need to execute `py.test` with the `nbval` flag
