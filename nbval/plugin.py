@@ -795,7 +795,7 @@ class IPyNbCell(pytest.Item):
         return s
 
 
-carriagereturn_pat = re.compile(r'.*\r(?=[^\n])')
+carriagereturn_pat = re.compile(r'^.*\r(?=[^\n])', re.MULTILINE)
 backspace_pat = re.compile(r'[^\n]\b')
 
 
