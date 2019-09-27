@@ -5,9 +5,8 @@ skip_branch_with_pr: true
 environment:
   matrix:
     - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_MAJOR: 3
-      PYTHON_ARCH: "64"
+    - PYTHON: "C:\\Python36-x64"
+    - PYTHON: "C:\\Python37-x64"
 
 # scripts that run after cloning repository
 install:
