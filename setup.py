@@ -26,7 +26,7 @@ setup(
         'jupyter_client',
         'nbformat',
         'ipykernel',
-        'coverage'
+        'coverage < 5',  # until gh-129 is fixed
     ],
     classifiers = [
         'Framework :: IPython',
