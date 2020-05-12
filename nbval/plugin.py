@@ -86,8 +86,16 @@ def pytest_addoption(parser):
 
     group.addoption('--current-env', action='store_true',
                     help='Force test execution to use a python kernel in '
-                         'the same enviornment that py.test was '
-                         'launched from.')
+                         'the same environment that py.test was '
+                         'launched from. Without this flag, the kernel stored '
+                         'in the notebook is used by default. '
+                         'See also: --kernel-name')
+
+    group.addoption('--kernel-name', action='store', default=None,
+                    help='Force test execution to use the named kernel. '
+                         'If a kernel is not named, the kernel stored in the '
+                         'notebook is used by default. '
+                         'See also: --current-env')
 
     group.addoption('--nbval-cell-timeout', action='store', default=2000,
                     type=float,
@@ -224,9 +232,12 @@ class IPyNbFile(pytest.File):
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-
+        if self.parent.config.option.kernel_name and self.parent.config.option.current_env:
+            raise ValueError("--current-env and --kernel-name are mutually exclusive.")
         if self.parent.config.option.current_env:
             kernel_name = CURRENT_ENV_KERNEL_NAME
+        elif self.parent.config.option.kernel_name:
+            kernel_name = self.parent.config.option.kernel_name
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
