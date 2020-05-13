@@ -112,6 +112,10 @@ def pytest_configure(config):
         from .nbdime_reporter import NbdimeReporter
         reporter = NbdimeReporter(config, sys.stdout)
         config.pluginmanager.register(reporter, 'nbdimereporter')
+    if config.option.nbval or config.option.nbval_lax:
+        if config.option.kernel_name and config.option.current_env:
+            raise ValueError("--current-env and --kernel-name are mutually exclusive.")
+
 
 
 def pytest_collect_file(path, parent):
@@ -232,8 +236,8 @@ class IPyNbFile(pytest.File):
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-        if self.parent.config.option.kernel_name and self.parent.config.option.current_env:
-            raise ValueError("--current-env and --kernel-name are mutually exclusive.")
+        # we've already checked that --current-env and --kernel-name
+        # were not both supplied
         if self.parent.config.option.current_env:
             kernel_name = CURRENT_ENV_KERNEL_NAME
         elif self.parent.config.option.kernel_name:
