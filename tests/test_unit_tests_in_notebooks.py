@@ -66,7 +66,7 @@ def test_print(filename, correctoutcome):
     if correctoutcome == 'pass':
         if exitcode != 0:
             raise AssertionError("Tests failed on ipynb (expected pass)")
-        assert exitcode is 0
+        assert exitcode == 0
         print("The call of py.test has not reported errors - this is good.")
     elif correctoutcome == 'fail':
         if exitcode == 0:

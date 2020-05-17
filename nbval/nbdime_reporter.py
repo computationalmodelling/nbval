@@ -25,7 +25,7 @@ from .plugin import IPyNbCell, bcolors
 
 nbdime.log.set_nbdime_log_level('ERROR')
 
-_re_nbval_nodeid = re.compile('.*\.ipynb::Cell \d+')
+_re_nbval_nodeid = re.compile(r'.*\.ipynb::Cell \d+')
 
 
 class NbdimeReporter:
