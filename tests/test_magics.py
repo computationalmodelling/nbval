@@ -11,6 +11,7 @@ pytest_plugins = "pytester"
 
 @pytest.mark.parametrize("magic, expected_passes", [
     (r"%dirs", [True]),
+    (r"%precision bad", [False]),
     (r"%this_magic_does_not_exist", [False])
 ])
 def test_magics(testdir, magic, expected_passes):
