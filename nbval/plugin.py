@@ -112,7 +112,11 @@ def pytest_collect_file(path, parent):
     """
     opt = parent.config.option
     if (opt.nbval or opt.nbval_lax) and path.fnmatch("*.ipynb"):
-        return IPyNbFile(path, parent)
+        # https://docs.pytest.org/en/stable/deprecations.html#node-construction-changed-to-node-from-parent
+        if hasattr(IPyNbFile, "from_parent"):
+            return IPyNbFile.from_parent(parent, fspath=path)
+        else:  # Pytest < 5.4
+            return IPyNbFile(path, parent)
 
 
 
@@ -308,8 +312,14 @@ class IPyNbFile(pytest.File):
                     )
                 options.update(comment_opts)
                 options.setdefault('check', self.compare_outputs)
-                yield IPyNbCell('Cell ' + str(cell_num), self, cell_num,
-                                cell, options)
+                name = 'Cell ' + str(cell_num)
+                # https://docs.pytest.org/en/stable/deprecations.html#node-construction-changed-to-node-from-parent
+                if hasattr(IPyNbCell, "from_parent"):
+                    yield IPyNbCell.from_parent(
+                        self, name=name, cell_num=cell_num, cell=cell, options=options
+                    )
+                else:
+                    yield IPyNbCell(name, self, cell_num, cell, options)
 
                 # Update 'code' cell count
                 cell_num += 1
