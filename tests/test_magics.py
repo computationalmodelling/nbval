@@ -9,35 +9,25 @@ from utils import build_nb
 
 pytest_plugins = "pytester"
 
-@pytest.mark.parametrize("magic, expected_passes", [
-    (r"%dirs", [True]),
-    (r"%precision bad", [False]),
-    (r"%this_magic_does_not_exist", [False])
+@pytest.mark.parametrize("magic, expected_pass", [
+    (r"%dirs", True),
+    (r"%precision bad", False),
+    (r"%this_magic_does_not_exist", False)
 ])
-def test_magics(testdir, magic, expected_passes):
-    # Setup notebook to test:
-    sources = [
+def test_magics(testdir, magic, expected_pass):
+    nb = build_nb([
         # In [1]:
         magic,
-    ]
-    nb = build_nb(sources)
-
-    # Write notebook to test dir
+    ])
+    nb_name = 'test_magics'
     nbformat.write(nb, os.path.join(
-        str(testdir.tmpdir), 'test_magics.ipynb'))
+        str(testdir.tmpdir), nb_name+".ipynb"))
 
-    # Run tests
-    result = testdir.inline_run('--nbval-lax', '--current-env', '-s')
-    reports = result.getreports('pytest_runtest_logreport')
+    # using subprocess because otherwise second and subsequent tests always fail (some state left over somewhere in the jupyter stack)
+    result = testdir.runpytest_subprocess('--nbval-lax', '--current-env', '-s', '-v')
 
-    # Setup and teardown of cells should have no issues:
-    setup_teardown = [r for r in reports if r.when != 'call']
-    for r in setup_teardown:
-        assert r.passed
+    assert result.ret == (not expected_pass)
 
-    reports = [r for r in reports if r.when == 'call']
-
-    assert len(reports) == len(expected_passes)
-
-    for actual_report, expected_pass in zip(reports, expected_passes):
-        assert actual_report.passed is expected_pass
+    result.stdout.fnmatch_lines_random(
+        ["*collected 1 item*",
+         "{nb_name}::ipynb::Cell 0 {result}".format(nb_name=nb_name, result="PASSED" if expected_pass else "FAILED")])
