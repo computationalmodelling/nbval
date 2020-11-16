@@ -93,6 +93,11 @@ def pytest_addoption(parser):
                     type=float,
                     help='Timeout for cell execution, in seconds.')
 
+    group.addoption('--nbval-cell-output-timeout', action='store', default=5,
+                    type=float,
+                    help='After cell execution, wait at most given seconds for'
+                         'the output to be generated')
+
     term_group = parser.getgroup("terminal reporting")
     term_group._addoption(
         '--nbdime', action='store_true',
@@ -343,7 +348,7 @@ class IPyNbCell(pytest.Item):
         self.test_outputs = None
         self.options = options
         self.config = parent.parent.config
-        self.output_timeout = 5
+        self.output_timeout = self.config.option.nbval_cell_output_timeout
         # Disable colors if we have been explicitly asked to
         self.colors = bcolors if self.config.option.color != 'no' else nocolors
         # _pytest.skipping assumes all pytest.Item have this attribute:
