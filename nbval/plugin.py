@@ -239,7 +239,10 @@ class IPyNbFile(pytest.File):
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
         self.kernel = RunningKernel(
-            kernel_name, self.config.option.nbval_kernel_startup_timeout, str(self.fspath.dirname))
+            kernel_name,
+            cwd=str(self.fspath.dirname),
+            startup_timeout=self.config.option.nbval_kernel_startup_timeout, 
+        )
         self.setup_sanitize_files()
         if getattr(self.parent.config.option, 'cov_source', None):
             setup_coverage(self.parent.config, self.kernel, getattr(self, "fspath", None))
