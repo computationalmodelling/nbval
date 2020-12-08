@@ -98,6 +98,10 @@ def pytest_addoption(parser):
                     help='After cell execution, wait at most given seconds for'
                          'the output to be generated')
 
+    group.addoption('--nbval-kernel-startup-timeout', action='store', default=60,
+                    type=float,
+                    help='Timeout for kernel startup, in seconds.')
+
     term_group = parser.getgroup("terminal reporting")
     term_group._addoption(
         '--nbdime', action='store_true',
@@ -239,7 +243,11 @@ class IPyNbFile(pytest.File):
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
-        self.kernel = RunningKernel(kernel_name, str(self.fspath.dirname))
+        self.kernel = RunningKernel(
+            kernel_name,
+            cwd=str(self.fspath.dirname),
+            startup_timeout=self.config.option.nbval_kernel_startup_timeout, 
+        )
         self.setup_sanitize_files()
         if getattr(self.parent.config.option, 'cov_source', None):
             setup_coverage(self.parent.config, self.kernel, getattr(self, "fspath", None))
