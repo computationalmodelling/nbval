@@ -75,7 +75,7 @@ class RunningKernel(object):
     this class.
 
     """
-    def __init__(self, kernel_name, cwd=None):
+    def __init__(self, kernel_name, cwd=None, startup_timeout=60):
         """
         Initialise a new kernel
         specify that matplotlib is inline and connect the stderr.
@@ -83,6 +83,7 @@ class RunningKernel(object):
         """
 
         self.km, self.kc = start_new_kernel(
+            startup_timeout=startup_timeout,
             kernel_name=kernel_name,
             stderr=open(os.devnull, 'w'),
             cwd=cwd,
