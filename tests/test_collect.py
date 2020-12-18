@@ -44,7 +44,7 @@ def test_collection_nbval(testdir):
     _write_nb(sources, os.path.join(str(testdir.tmpdir), 'test_collection.ipynb'))
 
     # Run tests
-    items, recorder = testdir.inline_genitems('--nbval', '--current-env')
+    items, recorder = testdir.inline_genitems('--nbval', '--nbval-current-env')
 
     # Debug output:
     for item in items:
@@ -60,7 +60,7 @@ def test_collection_nbval_lax(testdir):
     _write_nb(sources, os.path.join(str(testdir.tmpdir), 'test_collection.ipynb'))
 
     # Run tests
-    items, recorder = testdir.inline_genitems('--nbval-lax', '--current-env')
+    items, recorder = testdir.inline_genitems('--nbval-lax', '--nbval-current-env')
 
     # Debug output:
     for item in items:

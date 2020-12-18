@@ -51,7 +51,7 @@ def test_conf_ignore_stderr(testdir):
         str(testdir.tmpdir), 'test_ignore.ipynb'))
 
     # Run tests
-    result = testdir.runpytest_subprocess('--nbval', '--current-env', '.')
+    result = testdir.runpytest_subprocess('--nbval', '--nbval-current-env', '.')
 
     # Check tests went off as they should:
     assert result.ret == 0

@@ -72,11 +72,11 @@ Specify `-p no:python` if you would like to execute notebooks only. Alternativel
 
     py.test --nbval my_notebook.ipynb
 
-If the output lines are going to be sanitized, an extra flag, `--sanitize-with`
+If the output lines are going to be sanitized, an extra flag, `--nbval-sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
 
-    py.test --nbval my_notebook.ipynb --sanitize-with path/to/my_sanitize_file
+    py.test --nbval my_notebook.ipynb --nbval-sanitize-with path/to/my_sanitize_file
 
 where `my_sanitize_file` has the following structure.
 
