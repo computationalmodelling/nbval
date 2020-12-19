@@ -16,13 +16,7 @@ import hashlib
 import warnings
 from collections import OrderedDict, defaultdict
 
-# for python 3 compatibility
-import six
-
-try:
-    from Queue import Empty
-except:
-    from queue import Empty
+from queue import Empty
 
 # for reading notebook files
 import nbformat
@@ -503,9 +497,9 @@ class IPyNbCell(pytest.Item):
 
     def format_output_compare(self, key, left, right):
         """Format an output for printing"""
-        if isinstance(left, six.string_types):
+        if isinstance(left, str):
             left = _trim_base64(left)
-        if isinstance(right, six.string_types):
+        if isinstance(right, str):
             right = _trim_base64(right)
 
         cc = self.colors
@@ -799,7 +793,7 @@ class IPyNbCell(pytest.Item):
     def sanitize(self, s):
         """sanitize a string for comparison.
         """
-        if not isinstance(s, six.string_types):
+        if not isinstance(s, str):
             return s
 
         """
@@ -808,7 +802,7 @@ class IPyNbCell(pytest.Item):
         is passed when py.test is called. Otherwise, the strings
         are not processed
         """
-        for regex, replace in six.iteritems(self.parent.sanitize_patterns):
+        for regex, replace in self.parent.sanitize_patterns.items():
             s = re.sub(regex, replace, s)
         return s
 
@@ -904,6 +898,6 @@ def _trim_base64(s):
 
 def _indent(s, indent='  '):
     """Intent each line with indent"""
-    if isinstance(s, six.string_types):
+    if isinstance(s, str):
         return '\n'.join(('%s%s' % (indent, line) for line in s.splitlines()))
     return s
