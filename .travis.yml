@@ -6,8 +6,6 @@ python:
   - "3.8"
   - "3.7"
   - "3.6"
-  - "3.5"
-  - "2.7"
 
 matrix:
   allow_failures:
@@ -17,15 +15,9 @@ install:
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
   - unset VIRTUAL_ENV
-  # Python 3.4 and 2.7 need six installed before running setup.py
-  - pip install six
   # Travis needs to update pip/setuptools
   - pip install --upgrade setuptools pip
   - pip install .
-  - |
-    if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      pip install doit==0.29.0
-    fi
   - pip install doit
   - doit install_test_deps
 
