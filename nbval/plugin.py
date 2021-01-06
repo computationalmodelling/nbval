@@ -81,8 +81,16 @@ def pytest_addoption(parser):
 
     group.addoption('--current-env', action='store_true',
                     help='Force test execution to use a python kernel in '
-                         'the same enviornment that py.test was '
-                         'launched from.')
+                         'the same environment that py.test was '
+                         'launched from. Without this flag, the kernel stored '
+                         'in the notebook is used by default. '
+                         'See also: --nbval-kernel-name')
+
+    group.addoption('--nbval-kernel-name', action='store', default=None,
+                    help='Force test execution to use the named kernel. '
+                         'If a kernel is not named, the kernel stored in the '
+                         'notebook is used by default. '
+                         'See also: --current-env')
 
     group.addoption('--nbval-cell-timeout', action='store', default=2000,
                     type=float,
@@ -103,6 +111,10 @@ def pytest_configure(config):
         from .nbdime_reporter import NbdimeReporter
         reporter = NbdimeReporter(config, sys.stdout)
         config.pluginmanager.register(reporter, 'nbdimereporter')
+    if config.option.nbval or config.option.nbval_lax:
+        if config.option.nbval_kernel_name and config.option.current_env:
+            raise ValueError("--current-env and --nbval-kernel-name are mutually exclusive.")
+
 
 
 def pytest_collect_file(path, parent):
@@ -227,9 +239,12 @@ class IPyNbFile(pytest.File):
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-
+        # we've already checked that --current-env and
+        # --nbval-kernel-name were not both supplied
         if self.parent.config.option.current_env:
             kernel_name = CURRENT_ENV_KERNEL_NAME
+        elif self.parent.config.option.nbval_kernel_name:
+            kernel_name = self.parent.config.option.nbval_kernel_name
         else:
             kernel_name = self.nb.metadata.get(
                 'kernelspec', {}).get('name', 'python')
