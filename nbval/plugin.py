@@ -65,9 +65,10 @@ def pytest_addoption(parser):
 
     This is called by the pytest API
     """
-    group = parser.getgroup("general")
+    group = parser.getgroup("nbval", "Jupyter Notebook validation")
+
     group.addoption('--nbval', action='store_true',
-                    help="Validate Jupyter notebooks")
+                    help="Run Jupyter notebooks, validating all output")
 
     group.addoption('--nbval-lax', action='store_true',
                     help="Run Jupyter notebooks, only validating output on "

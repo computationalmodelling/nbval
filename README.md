@@ -115,8 +115,8 @@ notebook are run on the same kernel.
 ## Help
 The `py.test` system help can be obtained with `py.test -h`, which will
 show all the flags that can be passed to the command, such as the
-verbose `-v` option. The IPython notebook plugin can be found under the
-`general` section.
+verbose `-v` option. Nbval's options can be found under the
+`Jupyter Notebook validation` section.
 
 
 ## Acknowledgements
