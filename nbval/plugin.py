@@ -133,7 +133,6 @@ def pytest_configure(config):
 
 
 
-
 def pytest_collect_file(path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
