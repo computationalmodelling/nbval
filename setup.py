@@ -22,17 +22,16 @@ setup(
     },
     install_requires = [
         'pytest >= 2.8',
-        'six',
         'jupyter_client',
         'nbformat',
         'ipykernel',
         'coverage',
     ],
+    python_requires='>=3.6, <4',
     classifiers = [
         'Framework :: IPython',
         'Framework :: Pytest',
         'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Testing',
     ]

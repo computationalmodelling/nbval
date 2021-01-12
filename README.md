@@ -72,6 +72,12 @@ Specify `-p no:python` if you would like to execute notebooks only. Alternativel
 
     py.test --nbval my_notebook.ipynb
 
+By default, each `.ipynb` file will be executed using the kernel
+specified in its metadata. You can override this behavior by passing
+either `--nbval-kernel-name mykernel` to run all the notebooks using
+`mykernel`, or `--current-env` to use a kernel in the same environment
+in which pytest itself was launched.
+
 If the output lines are going to be sanitized, an extra flag, `--nbval-sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
@@ -115,8 +121,8 @@ notebook are run on the same kernel.
 ## Help
 The `py.test` system help can be obtained with `py.test -h`, which will
 show all the flags that can be passed to the command, such as the
-verbose `-v` option. The IPython notebook plugin can be found under the
-`general` section.
+verbose `-v` option. Nbval's options can be found under the
+`Jupyter Notebook validation` section.
 
 
 ## Acknowledgements
