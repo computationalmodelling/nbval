@@ -22,7 +22,7 @@ def _clean_dist_cmd():
 def task_test():
     return {
         'actions': [
-            _make_cmd(["py.test", "-v", "tests/", "--nbval", "--current-env", "--sanitize-with", "tests/sanitize_defaults.cfg", "--ignore", "tests/ipynb-test-samples"]),
+            _make_cmd(["py.test", "-v", "tests/", "--nbval", "--nbval-current-env", "--nbval-sanitize-with", "tests/sanitize_defaults.cfg", "--ignore", "tests/ipynb-test-samples"]),
         ],
     }
 

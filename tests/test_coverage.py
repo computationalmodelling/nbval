@@ -46,7 +46,7 @@ def test_coverage(testdir):
         str(testdir.tmpdir), 'test_coverage.ipynb'))
 
     # Run tests
-    result = testdir.runpytest_inprocess('--nbval', '--current-env', '--cov', '.')
+    result = testdir.runpytest_inprocess('--nbval', '--nbval-current-env', '--cov', '.')
 
     # Check tests went off as they should:
     assert result.ret == 0

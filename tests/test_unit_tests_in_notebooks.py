@@ -53,7 +53,7 @@ testnames, testdata = create_test_cases_from_filenames()
 @pytest.mark.parametrize("filename, correctoutcome", testdata, ids=testnames)
 def test_print(filename, correctoutcome):
 
-    command = ["py.test", "--nbval", "-v", "--current-env", filename]
+    command = ["py.test", "--nbval", "-v", "--nbval-current-env", filename]
     print("Starting parametrized test with filename={}, correctoutcome={}"
           .format(filename, correctoutcome))
     print("Command about to execute is '{}'".format(command))

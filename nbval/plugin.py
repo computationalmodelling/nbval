@@ -74,12 +74,12 @@ def pytest_addoption(parser):
                     help="Run Jupyter notebooks, only validating output on "
                          "cells marked with # NBVAL_CHECK_OUTPUT")
 
-    group.addoption('--sanitize-with',
+    group.addoption('--nbval-sanitize-with',
                     help='File with regex expressions to sanitize '
                          'the outputs. This option only works when '
                          'the --nbval flag is passed to py.test')
 
-    group.addoption('--current-env', action='store_true',
+    group.addoption('--nbval-current-env', action='store_true',
                     help='Force test execution to use a python kernel in '
                          'the same environment that py.test was '
                          'launched from. Without this flag, the kernel stored '
@@ -100,6 +100,12 @@ def pytest_addoption(parser):
                     type=float,
                     help='Timeout for kernel startup, in seconds.')
 
+    group.addoption('--sanitize-with',
+                    help='(deprecated) Alias of --nbval-sanitize-with')
+
+    group.addoption('--current-env', action='store_true',
+                    help='(deprecated) Alias of --nbval-current-env')    
+
     term_group = parser.getgroup("terminal reporting")
     term_group._addoption(
         '--nbdime', action='store_true',
@@ -111,6 +117,16 @@ def pytest_configure(config):
         from .nbdime_reporter import NbdimeReporter
         reporter = NbdimeReporter(config, sys.stdout)
         config.pluginmanager.register(reporter, 'nbdimereporter')
+    if config.option.sanitize_with:
+        warnings.warn("--sanitize-with has been renamed to --nbval-sanitize-with", DeprecationWarning)
+        if config.option.nbval_sanitize_with:
+            raise ValueError("--sanitize-with and --nbval-sanitize-with were both supplied.")
+        config.option.nbval_sanitize_with = config.option.sanitize_with
+    if config.option.current_env:
+        warnings.warn("--current-env has been renamed to --nbval-current-env", DeprecationWarning)
+        if config.option.nbval_current_env:
+            raise ValueError("--current-env and --nbval-current-env were both supplied.")
+        config.option.nbval_current_env = config.option.current_env
     if config.option.nbval or config.option.nbval_lax:
         if config.option.nbval_kernel_name and config.option.current_env:
             raise ValueError("--current-env and --nbval-kernel-name are mutually exclusive.")
@@ -239,9 +255,9 @@ class IPyNbFile(pytest.File):
         Called by pytest to setup the collector cells in .
         Here we start a kernel and setup the sanitize patterns.
         """
-        # we've already checked that --current-env and
+        # we've already checked that --nbval-current-env and
         # --nbval-kernel-name were not both supplied
-        if self.parent.config.option.current_env:
+        if self.parent.config.option.nbval_current_env:
             kernel_name = CURRENT_ENV_KERNEL_NAME
         elif self.parent.config.option.nbval_kernel_name:
             kernel_name = self.parent.config.option.nbval_kernel_name
@@ -276,8 +292,8 @@ class IPyNbFile(pytest.File):
               this is likely to change in the future
 
         """
-        if self.parent.config.option.sanitize_with is not None:
-            return [self.parent.config.option.sanitize_with]
+        if self.parent.config.option.nbval_sanitize_with is not None:
+            return [self.parent.config.option.nbval_sanitize_with]
         else:
             return []
 

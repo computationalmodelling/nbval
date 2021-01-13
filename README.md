@@ -78,11 +78,11 @@ either `--nbval-kernel-name mykernel` to run all the notebooks using
 `mykernel`, or `--current-env` to use a kernel in the same environment
 in which pytest itself was launched.
 
-If the output lines are going to be sanitized, an extra flag, `--sanitize-with`
+If the output lines are going to be sanitized, an extra flag, `--nbval-sanitize-with`
 together with the path to a confguration file with regex expressions, must be passed,
 i.e.
 
-    py.test --nbval my_notebook.ipynb --sanitize-with path/to/my_sanitize_file
+    py.test --nbval my_notebook.ipynb --nbval-sanitize-with path/to/my_sanitize_file
 
 where `my_sanitize_file` has the following structure.
 

@@ -46,7 +46,7 @@ def test_timeouts(testdir):
         str(testdir.tmpdir), 'test_timeouts.ipynb'))
 
     # Run tests
-    result = testdir.inline_run('--nbval', '--current-env', '--nbval-cell-timeout', '5', '-s')
+    result = testdir.inline_run('--nbval', '--nbval-current-env', '--nbval-cell-timeout', '5', '-s')
     reports = result.getreports('pytest_runtest_logreport')
 
     # Setup and teardown of cells should have no issues:
