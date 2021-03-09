@@ -105,7 +105,7 @@ def pytest_addoption(parser):
                     help='(deprecated) Alias of --nbval-sanitize-with')
 
     group.addoption('--current-env', action='store_true',
-                    help='(deprecated) Alias of --nbval-current-env')    
+                    help='(deprecated) Alias of --nbval-current-env')
 
     term_group = parser.getgroup("terminal reporting")
     term_group._addoption(
@@ -147,6 +147,7 @@ def pytest_collect_file(file_path, parent):
 comment_markers = {
     'PYTEST_VALIDATE_IGNORE_OUTPUT': ('check', False),  # For backwards compatibility
     'NBVAL_IGNORE_OUTPUT': ('check', False),
+    'NBVAL_TEST_NAME': ('name', str),
     'NBVAL_CHECK_OUTPUT': 'check',
     'NBVAL_RAISES_EXCEPTION': 'check_exception',
     'NBVAL_SKIP': 'skip',
@@ -170,7 +171,13 @@ def find_comment_markers(cellsource):
         line = line.strip()
         if line.startswith('#'):
             # print("Found comment in '{}'".format(line))
-            comment = line.lstrip('#').strip()
+            comment_val = line.lstrip('#').strip()
+            if ':' in comment_val:
+                comment, val = comment_val.split(':', 1)
+                comment = comment.rstrip()
+                val = val.lstrip()
+            else:
+                comment = comment_val
             if comment in comment_markers:
                 # print("Found marker {}".format(comment))
                 marker = comment_markers[comment]
@@ -178,6 +185,8 @@ def find_comment_markers(cellsource):
                     # If not an explicit tuple ('option', True/False),
                     # imply ('option', True)
                     marker = (marker, True)
+                elif marker[1] is str:
+                    marker = (marker[0], val)
                 marker_type = marker[0]
                 if marker_type in found:
                     warnings.warn(
@@ -264,7 +273,7 @@ class IPyNbFile(pytest.File):
         self.kernel = RunningKernel(
             kernel_name,
             cwd=str(self.fspath.dirname),
-            startup_timeout=self.config.option.nbval_kernel_startup_timeout, 
+            startup_timeout=self.config.option.nbval_kernel_startup_timeout,
         )
         self.setup_sanitize_files()
         if getattr(self.parent.config.option, 'cov_source', None):
@@ -311,7 +320,7 @@ class IPyNbFile(pytest.File):
         self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
-        cell_num = 1
+        cell_num = 0
 
         # Iterate over the cells in the notebook
         for cell in self.nb.cells:
@@ -324,6 +333,8 @@ class IPyNbFile(pytest.File):
                 with warnings.catch_warnings(record=True) as ws:
                     options = defaultdict(bool, find_metadata_tags(cell.metadata))
                     comment_opts = dict(find_comment_markers(cell.source))
+                # Update 'code' cell count
+                cell_num += 1
                 loc = '%s:Cell %d' % (getattr(self, "fspath", None), cell_num)
                 if set(comment_opts.keys()) & set(options.keys()):
                     warnings.warn_explicit(
@@ -342,14 +353,12 @@ class IPyNbFile(pytest.File):
                         lineno=0
                     )
                 options.update(comment_opts)
+                options.setdefault('name', f'Cell {cell_num:d}')
                 options.setdefault('check', self.compare_outputs)
-                name = 'Cell ' + str(cell_num)
+                name = options['name']
                 yield IPyNbCell.from_parent(
                     self, name=name, cell_num=cell_num, cell=cell, options=options
                 )
-
-                # Update 'code' cell count
-                cell_num += 1
 
     def teardown(self):
         if self.kernel is not None and self.kernel.is_alive():
