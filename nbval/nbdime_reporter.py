@@ -7,8 +7,18 @@ Authors: V.T. Fauske
 
 # import the pytest API
 import pytest
-from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
-    EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
+try:
+    from _pytest.main import ExitCode
+    EXIT_OK = ExitCode.OK
+    EXIT_TESTSFAILED = ExitCode.TESTS_FAILED
+    EXIT_INTERRUPTED = ExitCode.INTERRUPTED
+    EXIT_USAGEERROR = ExitCode.USAGE_ERROR
+    EXIT_NOTESTSCOLLECTED = ExitCode.NO_TESTS_COLLECTED
+except ImportError:
+    # pytest < 0.5.0
+    from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
+        EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
+
 
 import re
 import copy
