@@ -104,7 +104,7 @@ def pytest_addoption(parser):
                     help='(deprecated) Alias of --nbval-sanitize-with')
 
     group.addoption('--current-env', action='store_true',
-                    help='(deprecated) Alias of --nbval-current-env')    
+                    help='(deprecated) Alias of --nbval-current-env')
 
     term_group = parser.getgroup("terminal reporting")
     term_group._addoption(
@@ -267,7 +267,7 @@ class IPyNbFile(pytest.File):
         self.kernel = RunningKernel(
             kernel_name,
             cwd=str(self.fspath.dirname),
-            startup_timeout=self.config.option.nbval_kernel_startup_timeout, 
+            startup_timeout=self.config.option.nbval_kernel_startup_timeout,
         )
         self.setup_sanitize_files()
         if getattr(self.parent.config.option, 'cov_source', None):
@@ -314,7 +314,7 @@ class IPyNbFile(pytest.File):
         self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
-        cell_num = 0
+        cell_num = 1
 
         # Iterate over the cells in the notebook
         for cell in self.nb.cells:
