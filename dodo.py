@@ -27,7 +27,7 @@ def task_test():
     }
 
 def task_install_test_deps():
-    test_deps = ['matplotlib', 'sympy', 'pytest-cov']
+    test_deps = ['matplotlib', 'sympy', 'pytest-cov', 'pytest-mock', 'nbdime']
     return {
         'actions': [_make_cmd(['pip', 'install'] + test_deps)],
     }

@@ -22,7 +22,6 @@ setup(
     },
     install_requires = [
         'pytest >= 2.8',
-        'pytest-mock',
         'jupyter_client',
         'nbformat',
         'ipykernel',
