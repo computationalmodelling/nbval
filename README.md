@@ -117,6 +117,9 @@ nbval is compatible with the pytest-xdist plugin for parallel running of tests. 
 however require the use of the `--dist loadscope` flag to ensure that all cells of one
 notebook are run on the same kernel.
 
+## Documentation
+
+The narrative documentation for nbval can be found at https://nbval.readthedocs.io.
 
 ## Help
 The `py.test` system help can be obtained with `py.test -h`, which will
