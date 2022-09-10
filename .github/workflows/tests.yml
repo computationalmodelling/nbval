@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, '3.10']
 
     steps:
     - name: Checkout
@@ -24,8 +24,9 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip doit
-        python3 -m pip install .
         doit install_test_deps
+        python3 -m pip install .
+        python3 -m pip freeze  # do make debugging easier for failures due to version changes
 
     - name: Test with pytest
       run: |
