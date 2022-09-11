@@ -1,6 +1,6 @@
 # Py.test plugin for validating Jupyter notebooks
 
-[![Build Status](https://travis-ci.org/computationalmodelling/nbval.svg)](https://travis-ci.org/computationalmodelling/nbval)
+[![Tests](https://github.com/computationalmodelling/nbval/actions/workflows/tests.yml/badge.svg)](https://github.com/computationalmodelling/nbval/actions/workflows/tests.yml)
 [![PyPI Version](https://badge.fury.io/py/nbval.svg)](https://pypi.python.org/pypi/nbval)
 [![Documentation Status](https://readthedocs.org/projects/nbval/badge/)](https://nbval.readthedocs.io/)
 
