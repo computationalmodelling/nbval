@@ -145,7 +145,12 @@ class RunningKernel(object):
             logger.debug('Executing cell: "%s"...', cell_input.splitlines()[0][:40])
         else:
             logger.debug('Executing empty cell')
-        return self.kc.execute(cell_input, allow_stdin=allow_stdin, stop_on_error=False)
+        return self.kc.execute(
+            cell_input,
+            store_history=False,
+            allow_stdin=allow_stdin,
+            stop_on_error=False,
+        )
 
     def await_reply(self, msg_id, timeout=None):
         """
