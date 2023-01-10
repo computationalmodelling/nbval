@@ -15,6 +15,7 @@ import re
 import hashlib
 import warnings
 from collections import OrderedDict, defaultdict
+from pathlib import Path
 
 from queue import Empty
 
@@ -141,7 +142,10 @@ def pytest_collect_file(path, parent):
     if (opt.nbval or opt.nbval_lax) and path.fnmatch("*.ipynb"):
         # https://docs.pytest.org/en/stable/deprecations.html#node-construction-changed-to-node-from-parent
         if hasattr(IPyNbFile, "from_parent"):
-            return IPyNbFile.from_parent(parent, fspath=path)
+            try:  # Pytest >= 7.0.0
+                return IPyNbFile.from_parent(parent, path=Path(path))
+            except AssertionError:
+                return IPyNbFile.from_parent(parent, fspath=path)
         else:  # Pytest < 5.4
             return IPyNbFile(path, parent)
 
