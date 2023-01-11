@@ -15,7 +15,7 @@ reference and documentation), are executing consistently.
 Each cell is taken as a test, a cell that doesn't reproduce the expected
 output will fail.
 
-See [`docs/source/index.ipynb`](http://nbviewer.jupyter.org/github/computationalmodelling/nbval/blob/master/docs/source/index.ipynb) for the full documentation.
+See [`docs/source/index.ipynb`](http://nbviewer.jupyter.org/github/computationalmodelling/nbval/blob/HEAD/docs/source/index.ipynb) for the full documentation.
 
 ## Installation
 Available on PyPi:
@@ -141,12 +141,12 @@ We acknowledge financial support from
 
 - OpenDreamKit Horizon 2020 European Research Infrastructures project (#676541), http://opendreamkit.org
 
-- EPSRC’s Centre for Doctoral Training in Next Generation
+- EPSRC's Centre for Doctoral Training in Next Generation
   Computational Modelling, http://ngcm.soton.ac.uk (#EP/L015382/1) and
-  EPSRC’s Doctoral Training Centre in Complex System Simulation
+  EPSRC's Doctoral Training Centre in Complex System Simulation
   ((EP/G03690X/1),
 
-- The Gordon and Betty Moore Foundation through Grant GBMF #4856,by the
+- The Gordon and Betty Moore Foundation through Grant GBMF #4856, by the
   Alfred P. Sloan Foundation and by the Helmsley Trust.
 
 
