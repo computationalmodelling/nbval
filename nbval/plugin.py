@@ -144,7 +144,7 @@ def pytest_collect_file(path, parent):
         if hasattr(IPyNbFile, "from_parent"):
             try:  # Pytest >= 7.0.0
                 return IPyNbFile.from_parent(parent, path=Path(path))
-            except AssertionError:
+            except (AssertionError, TypeError):
                 return IPyNbFile.from_parent(parent, fspath=path)
         else:  # Pytest < 5.4
             return IPyNbFile(path, parent)
@@ -354,7 +354,7 @@ class IPyNbFile(pytest.File):
                 # https://docs.pytest.org/en/stable/deprecations.html#node-construction-changed-to-node-from-parent
                 if hasattr(IPyNbCell, "from_parent"):
                     yield IPyNbCell.from_parent(
-                        self, fspath=self.fspath, name=name, cell_num=cell_num, cell=cell, options=options
+                        self, name=name, cell_num=cell_num, cell=cell, options=options
                     )
                 else:
                     yield IPyNbCell(name, self, cell_num, cell, options)
