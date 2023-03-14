@@ -144,7 +144,7 @@ def pytest_collect_file(path, parent):
         if hasattr(IPyNbFile, "from_parent"):
             try:  # Pytest >= 7.0.0
                 return IPyNbFile.from_parent(parent, path=Path(path))
-            except AssertionError:
+            except (AssertionError, TypeError):
                 return IPyNbFile.from_parent(parent, fspath=path)
         else:  # Pytest < 5.4
             return IPyNbFile(path, parent)
