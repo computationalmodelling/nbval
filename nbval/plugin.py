@@ -354,7 +354,7 @@ class IPyNbFile(pytest.File):
                 # https://docs.pytest.org/en/stable/deprecations.html#node-construction-changed-to-node-from-parent
                 if hasattr(IPyNbCell, "from_parent"):
                     yield IPyNbCell.from_parent(
-                        self, name=name, cell_num=cell_num, cell=cell, options=options
+                        self, fspath=self.fspath, name=name, cell_num=cell_num, cell=cell, options=options
                     )
                 else:
                     yield IPyNbCell(name, self, cell_num, cell, options)
