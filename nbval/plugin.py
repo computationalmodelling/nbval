@@ -134,14 +134,14 @@ def pytest_configure(config):
 
 
 
-def pytest_collect_file(collection_path, parent):
+def pytest_collect_file(file_path, parent):
     """
     Collect IPython notebooks using the specified pytest hook
     """
     opt = parent.config.option
-    if (opt.nbval or opt.nbval_lax) and collection_path.suffix == ".ipynb":
+    if (opt.nbval or opt.nbval_lax) and file_path.suffix == ".ipynb":
         # https://docs.pytest.org/en/stable/deprecations.html#node-construction-changed-to-node-from-parent
-        return IPyNbFile.from_parent(parent, path=collection_path)
+        return IPyNbFile.from_parent(parent, path=file_path)
 
 
 comment_markers = {
