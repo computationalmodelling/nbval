@@ -59,7 +59,7 @@ def setup_coverage(config, kernel, floc, output_loc=None):
 
         # Build setup command and execute in kernel:
         cmd = _python_setup % (data_file, source, config_file)
-        msg_id = kernel.kc.execute(cmd, stop_on_error=False)
+        msg_id = kernel.kc.execute(cmd, stop_on_error=False, store_history=False)
         kernel.await_idle(msg_id, 60)  # A minute should be plenty to enable coverage
     else:
         warnings.warn_explicit(
@@ -80,7 +80,7 @@ def teardown_coverage(config, kernel, output_loc=None):
     language = kernel.language
     if language.startswith('python'):
         # Teardown code does not require any input, simply execute:
-        msg_id = kernel.kc.execute(_python_teardown)
+        msg_id = kernel.kc.execute(_python_teardown, store_history=False)
         kernel.await_idle(msg_id, 60)  # A minute should be plenty to write out coverage
 
     else:
