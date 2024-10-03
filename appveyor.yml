@@ -9,6 +9,7 @@ environment:
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python38-x64"
     - PYTHON: "C:\\Python39-x64"
+    - PYTHON: "C:\\Python313-x64"
 
 # scripts that run after cloning repository
 install:
