@@ -7,12 +7,12 @@ on:
     paths-ignore:
       - "docs/**"
       - ".github/workflows/**"
-      - "!.github/workflows/release.yaml"
+      - "!.github/workflows/release.yml"
   push:
     paths-ignore:
       - "docs/**"
       - ".github/workflows/**"
-      - "!.github/workflows/release.yaml"
+      - "!.github/workflows/release.yml"
     branches-ignore:
       - "dependabot/**"
       - "pre-commit-ci-update-config"
