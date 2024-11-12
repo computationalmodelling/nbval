@@ -21,13 +21,13 @@ setup(
         ]
     },
     install_requires = [
-        'pytest >= 2.8',
+        'pytest >= 7',
         'jupyter_client',
         'nbformat',
         'ipykernel',
         'coverage',
     ],
-    python_requires='>=3.6, <4',
+    python_requires='>=3.8, <4',
     classifiers = [
         'Framework :: IPython',
         'Framework :: Pytest',

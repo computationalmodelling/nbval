@@ -6,10 +6,11 @@ image: Visual Studio 2019
 # environment variables
 environment:
   matrix:
-    - PYTHON: "C:\\Python36-x64"
-    - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python38-x64"
     - PYTHON: "C:\\Python39-x64"
+    - PYTHON: "C:\\Python310-x64"
+    - PYTHON: "C:\\Python311-x64"
+    - PYTHON: "C:\\Python312-x64"
 
 # scripts that run after cloning repository
 install:
