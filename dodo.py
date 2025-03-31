@@ -27,9 +27,7 @@ def task_test():
     }
 
 def task_install_test_deps():
-    # ipython_genutils is an indirect dependency of nbdime, but can be removed from this list
-    # once https://github.com/jupyter/nbdime/pull/618 ends up in a release
-    test_deps = ['matplotlib', 'sympy', 'pytest-cov', 'pytest-mock', 'nbdime', 'ipython_genutils']
+    test_deps = ['matplotlib', 'sympy', 'pytest-cov', 'pytest-mock', 'nbdime']
     return {
         'actions': [_make_cmd(['pip', 'install'] + test_deps)],
     }
