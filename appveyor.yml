@@ -5,8 +5,7 @@ image: Visual Studio 2019
 
 # environment variables
 environment:
-  matrix:
-    - PYTHON: "C:\\Python38-x64"
+  matrix:    
     - PYTHON: "C:\\Python39-x64"
     - PYTHON: "C:\\Python310-x64"
     - PYTHON: "C:\\Python311-x64"
