@@ -2,6 +2,10 @@ name: Tests
 
 on:
   push:
+    branches:
+    - master
+    tags:
+    - '*'
   pull_request:
 
 env:
