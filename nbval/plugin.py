@@ -931,12 +931,11 @@ def _indent(s, indent='  '):
 skip_modules = []
 
 
-@pytest.hookimpl(trylast=True, hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    outcome = yield
+@pytest.hookimpl(trylast=True)
+def pytest_runtest_logreport(report):
 
-    if outcome.get_result().failed:
-        skip_modules.append(item.path)
+    if 'failed' in report.outcome:
+        skip_modules.append(report.fspath)
 
 
 def pytest_runtest_call(item):
