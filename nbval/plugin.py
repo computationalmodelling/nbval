@@ -926,3 +926,19 @@ def _indent(s, indent='  '):
     if isinstance(s, str):
         return '\n'.join(('%s%s' % (indent, line) for line in s.splitlines()))
     return s
+
+
+skip_modules = []
+
+
+@pytest.hookimpl(trylast=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+
+    if outcome.get_result().failed:
+        skip_modules.append(item.path)
+
+
+def pytest_runtest_call(item):
+    if item.path in skip_modules:
+        pytest.skip(f"Due to the previous failure skipping rest of tests in {item.path}")
