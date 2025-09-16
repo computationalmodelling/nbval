@@ -311,7 +311,7 @@ class IPyNbFile(pytest.File):
         self.nb = nbformat.read(str(self.fspath), as_version=4)
 
         # Start the cell count
-        cell_num = 0
+        cell_num = 1
 
         # Iterate over the cells in the notebook
         for cell in self.nb.cells:
