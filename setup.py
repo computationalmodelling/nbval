@@ -9,6 +9,7 @@ setup(
     name="nbval",
     version=__version__,
     author="Laslett, Cortes, Fauske, Kluyver, Pepper, Fangohr",
+    license="BSD-3-Clause",
     description='A py.test plugin to validate Jupyter notebooks',
     long_description=readme,
     long_description_content_type="text/markdown",
