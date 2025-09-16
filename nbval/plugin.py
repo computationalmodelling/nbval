@@ -277,7 +277,7 @@ class IPyNbFile(pytest.File):
         load the contents of the file into the sanitise patterns dictionary.
         """
         for fname in self.get_sanitize_files():
-            with open(fname, 'r') as f:
+            with open(fname, 'r', encoding="utf-8") as f:
                 self.sanitize_patterns.update(get_sanitize_patterns(f.read()))
 
 
