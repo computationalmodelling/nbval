@@ -7,6 +7,7 @@ Authors: D. Cortes, O. Laslett, T. Kluyver, H. Fangohr, V.T. Fauske
 
 import os
 import logging
+import subprocess
 from pprint import pformat
 
 try:
@@ -85,7 +86,7 @@ class RunningKernel(object):
         self.km, self.kc = start_new_kernel(
             startup_timeout=startup_timeout,
             kernel_name=kernel_name,
-            stderr=open(os.devnull, 'w'),
+            stderr=subprocess.DEVNULL,
             cwd=cwd,
         )
 
