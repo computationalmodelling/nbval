@@ -474,12 +474,18 @@ class IPyNbCell(pytest.Item):
             )
             return False
         elif test_keys - ref_keys:
+            extra_keys = test_keys - ref_keys
             self.comparison_traceback.append(
                 cc.FAIL
-                + "Unexpected output fields from running code: %s"
-                % (test_keys - ref_keys)
+                + "Unexpected output fields from running code: %s" % extra_keys
                 + cc.ENDC
-            )
+                + "<<<<<<<<<<<< Unexpected content:"
+                + "\n".join("%s: %s" % (i, testing_outs[i]) for i in extra_keys)
+                + cc.FAIL
+                + '>>>>>>>>>>>>'
+                + cc.ENDC
+                )
+            print('IN STDERR WE GOT: %s' % testing_outs['stderr'])
             return False
 
         # If we've got to here, the two dicts must have the same set of keys
