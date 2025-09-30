@@ -478,6 +478,8 @@ class IPyNbCell(pytest.Item):
                 cc.FAIL
                 + "Unexpected output fields from running code: %s"
                 % (test_keys - ref_keys)
+                + self.maybe_show_output_mismatch(testing_outs,
+                                                  reference_outs)
                 + cc.ENDC
             )
             return False
@@ -520,6 +522,19 @@ class IPyNbCell(pytest.Item):
                     return False
         return True
 
+    def maybe_show_output_mismatch(self, testing_outs, reference_outs,
+                                   verbosity_for_show=3):
+        """Show testing outputs not in reference outputs based on verbosity.
+        """
+        if self.config.get_verbosity() >= verbosity_for_show:
+            result = []
+            for stream, contents in testing_outs.items():
+                if stream not in reference_outs:
+                    result.append(
+                        f'\n{stream} in test but not in reference: {contents}\n')
+            return '\n'.join(result)
+        return ''
+        
     def format_output_compare(self, key, left, right):
         """Format an output for printing"""
         if isinstance(left, str):
