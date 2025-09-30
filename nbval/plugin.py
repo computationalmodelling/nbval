@@ -466,12 +466,22 @@ class IPyNbCell(pytest.Item):
         test_keys = set(testing_outs.keys())
 
         if ref_keys - test_keys:
-            self.comparison_traceback.append(
-                cc.FAIL
-                + "Missing output fields from running code: %s"
-                % (ref_keys - test_keys)
-                + cc.ENDC
-            )
+            if ref_keys == {'evalue', 'ename'}:
+                self.comparison_traceback.append(
+                    cc.FAIL
+                    + "Expected error:\n  %s: %r" % (
+                        '\n'.join(reference_outs['ename']),
+                        '\n'.join(reference_outs['evalue'])
+                    )
+                    + cc.ENDC
+                )
+            else:
+                self.comparison_traceback.append(
+                    cc.FAIL
+                    + "Missing output fields from running code: %s"
+                    % (ref_keys - test_keys)
+                    + cc.ENDC
+                )
             return False
         elif test_keys - ref_keys:
             self.comparison_traceback.append(
@@ -608,7 +618,7 @@ class IPyNbCell(pytest.Item):
 
         # Poll the shell channel to get a message
         try:
-            self.parent.kernel.await_reply(msg_id, timeout=timeout)
+            kernel.await_reply(msg_id, timeout=timeout)
         except Empty:  # Timeout reached
             # Try to interrupt kernel, as this will give us traceback:
             kernel.interrupt()
@@ -619,6 +629,13 @@ class IPyNbCell(pytest.Item):
         outs = []
         # TODO: Only store if comparing with nbdime, to save on memory usage
         self.test_outputs = outs
+
+        # Cells where the reference is not run, will not check outputs:
+        unrun = self.cell.execution_count is None
+        if unrun and self.cell.outputs:
+            self.raise_cell_error('Unrun reference cell has outputs')
+
+        cell_has_error = False
 
         # Now get the outputs from the iopub channel
         while True:
@@ -730,6 +747,7 @@ class IPyNbCell(pytest.Item):
             # cell execution. Therefore raise a cell error and pass the
             # traceback information.
             elif msg_type == 'error':
+                cell_has_error = True
                 # Store error in output first
                 out['ename'] = reply['ename']
                 out['evalue'] = reply['evalue']
@@ -738,9 +756,9 @@ class IPyNbCell(pytest.Item):
                 if not self.options['check_exception']:
                     # Ensure we flush iopub before raising error
                     try:
-                        self.parent.kernel.await_idle(msg_id, self.output_timeout)
+                        kernel.await_idle(msg_id, self.output_timeout)
                     except Empty:
-                        self.stop()
+                        kernel.stop()
                         raise RuntimeError('Timed out waiting for idle kernel!')
                     traceback = '\n' + '\n'.join(reply['traceback'])
                     if out['ename'] == 'KeyboardInterrupt' and self.parent.timed_out:
@@ -756,10 +774,11 @@ class IPyNbCell(pytest.Item):
 
         outs[:] = coalesce_streams(outs)
 
-        # Cells where the reference is not run, will not check outputs:
-        unrun = self.cell.execution_count is None
-        if unrun and self.cell.outputs:
-            self.raise_cell_error('Unrun reference cell has outputs')
+        if self.options['check_exception'] and unrun and not cell_has_error:
+            # If unrun, we cannot rely on output comparison for checking errors
+            self.raise_cell_error(
+                "Expected error",
+                "Expected cell to produce an error, but none was produced!")
 
         # Compare if the outputs have the same number of lines
         # and throw an error if it fails
