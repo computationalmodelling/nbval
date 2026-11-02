@@ -101,6 +101,11 @@ def pytest_addoption(parser):
                     type=float,
                     help='Timeout for kernel startup, in seconds.')
 
+    group.addoption('--nbval-kernel-startup-retries', action='store', default=0,
+                    type=int,
+                    help='How often to start a new kernel when a kernel dies '
+                         'or does not respond during startup.')
+
     group.addoption('--sanitize-with',
                     help='(deprecated) Alias of --nbval-sanitize-with')
 
@@ -265,6 +270,7 @@ class IPyNbFile(pytest.File):
             kernel_name,
             cwd=str(self.fspath.dirname),
             startup_timeout=self.config.option.nbval_kernel_startup_timeout, 
+            startup_retries=self.config.option.nbval_kernel_startup_retries,
         )
         self.setup_sanitize_files()
         if getattr(self.parent.config.option, 'cov_source', None):
