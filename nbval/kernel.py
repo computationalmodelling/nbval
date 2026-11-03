@@ -45,23 +45,37 @@ class NbvalKernelspecManager(KernelSpecManager):
             return super(NbvalKernelspecManager, self).get_kernel_spec(kernel_name)
 
 
-def start_new_kernel(startup_timeout=60, kernel_name='python', **kwargs):
-    """Start a new kernel, and return its Manager and Client"""
-    logger.debug('Starting new kernel: "%s"' % kernel_name)
-    km = KernelManager(kernel_name=kernel_name,
-                       kernel_spec_manager=NbvalKernelspecManager())
-    km.start_kernel(**kwargs)
-    kc = km.client()
-    kc.start_channels()
-    try:
-        kc.wait_for_ready(timeout=startup_timeout)
-    except RuntimeError:
-        logger.exception('Failure starting kernel "%s"', kernel_name)
-        kc.stop_channels()
-        km.shutdown_kernel()
-        raise
+def start_new_kernel(startup_timeout=60, kernel_name='python',
+                     startup_retries=0, **kwargs):
+    """Start a new kernel, and return its Manager and Client
 
-    return km, kc
+    If the kernel dies or does not reply within `startup_timeout` seconds,
+    a new kernel is started, up to `startup_retries` times. Each new kernel
+    gets new ports, so it does not fail if another process took one of the
+    ports chosen for the previous kernel before that kernel could bind it.
+    """
+    for attempt in range(startup_retries + 1):
+        logger.debug('Starting new kernel: "%s"' % kernel_name)
+        km = KernelManager(kernel_name=kernel_name,
+                           kernel_spec_manager=NbvalKernelspecManager())
+        extra_arguments = []
+        if km.ipykernel or kernel_name == CURRENT_ENV_KERNEL_NAME:
+            # Keep the history in memory, as nbclient does. Kernels that start
+            # at the same time otherwise race on the profile's history.sqlite.
+            extra_arguments.append('--HistoryManager.hist_file=:memory:')
+        km.start_kernel(extra_arguments=extra_arguments, **kwargs)
+        kc = km.client()
+        kc.start_channels()
+        try:
+            kc.wait_for_ready(timeout=startup_timeout)
+        except RuntimeError:
+            logger.exception('Failure starting kernel "%s"', kernel_name)
+            kc.stop_channels()
+            km.shutdown_kernel()
+            if attempt == startup_retries:
+                raise
+        else:
+            return km, kc
 
 
 class RunningKernel(object):
@@ -75,7 +89,8 @@ class RunningKernel(object):
     this class.
 
     """
-    def __init__(self, kernel_name, cwd=None, startup_timeout=60):
+    def __init__(self, kernel_name, cwd=None, startup_timeout=60,
+                 startup_retries=0):
         """
         Initialise a new kernel
         specify that matplotlib is inline and connect the stderr.
@@ -84,6 +99,7 @@ class RunningKernel(object):
 
         self.km, self.kc = start_new_kernel(
             startup_timeout=startup_timeout,
+            startup_retries=startup_retries,
             kernel_name=kernel_name,
             stderr=open(os.devnull, 'w'),
             cwd=cwd,
