@@ -58,7 +58,12 @@ def start_new_kernel(startup_timeout=60, kernel_name='python',
         logger.debug('Starting new kernel: "%s"' % kernel_name)
         km = KernelManager(kernel_name=kernel_name,
                            kernel_spec_manager=NbvalKernelspecManager())
-        km.start_kernel(**kwargs)
+        extra_arguments = []
+        if km.ipykernel or kernel_name == CURRENT_ENV_KERNEL_NAME:
+            # Keep the history in memory, as nbclient does. Kernels that start
+            # at the same time otherwise race on the profile's history.sqlite.
+            extra_arguments.append('--HistoryManager.hist_file=:memory:')
+        km.start_kernel(extra_arguments=extra_arguments, **kwargs)
         kc = km.client()
         kc.start_channels()
         try:

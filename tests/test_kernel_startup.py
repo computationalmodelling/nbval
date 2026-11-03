@@ -1,6 +1,14 @@
+import os
+
+import nbformat
 import pytest
 
 from nbval.kernel import start_new_kernel
+
+from utils import build_nb
+
+
+pytest_plugins = "pytester"
 
 
 def kernel_managers(mocker, dying):
@@ -35,3 +43,17 @@ def test_the_error_is_raised_when_all_kernels_die(mocker):
         start_new_kernel(startup_retries=1)
 
     assert len(managers) == 2
+
+
+def test_ipython_kernels_keep_their_history_in_memory(testdir):
+    nb = build_nb([
+        "from IPython import get_ipython\n"
+        "assert get_ipython().history_manager.hist_file == ':memory:'",
+    ])
+    nbformat.write(nb, os.path.join(str(testdir.tmpdir), 'test_history.ipynb'))
+
+    result = testdir.inline_run('--nbval-lax', '--nbval-current-env')
+
+    passed, skipped, failed = result.listoutcomes()
+    assert len(passed) == 1
+    assert not failed
