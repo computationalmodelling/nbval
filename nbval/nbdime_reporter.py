@@ -56,7 +56,7 @@ class NbdimeReporter:
     def pytest_runtest_logreport(self, report):
         """Store all test reports for evaluation on finish"""
         rep = report
-        res = self.config.hook.pytest_report_teststatus(report=rep)
+        res = self.config.hook.pytest_report_teststatus(report=rep, config=self.config)
         cat, letter, word = res
         self.stats.setdefault(cat, []).append(rep)
 
